@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const pool = require('./dbConfig'); // Updated path to include config folder
+const pool = require('./dbConfig'); 
 const app = express();
 
 //middleware 
