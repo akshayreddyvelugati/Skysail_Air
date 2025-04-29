@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const airplanesController = require('../controllers/airplanesController');
 
-router.get('/', airplanesController.getAllAirplanes);
-router.post('/', airplanesController.addAirplane);
-router.put('/:id', airplanesController.updateAirplane);
-router.delete('/:id', airplanesController.deleteAirplane);
+module.exports = (pool) => {
+  const controller = airplanesController(pool);
+  router.get('/', controller.getAllAirplanes);
+  router.post('/', controller.addAirplane);
+  router.put('/:id', controller.updateAirplane);
+  router.delete('/:id', controller.deleteAirplane);
 
-module.exports = router;
+  return router;
+};

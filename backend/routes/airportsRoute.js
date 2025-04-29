@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const airportsController = require('../controllers/airportsController');
 
-router.get('/', airportsController.getAllAirports);
-router.post('/', airportsController.addAirport);
-router.put('/:id', airportsController.updateAirport);
-router.delete('/:id', airportsController.deleteAirport);
+module.exports = (pool) => {
+  const controller = airportsController(pool);
+  router.get('/', controller.getAllAirports);
+  router.post('/', controller.addAirport);
+  router.put('/:id', controller.updateAirport);
+  router.delete('/:id', controller.deleteAirport);
 
-module.exports = router;
+  return router;
+};

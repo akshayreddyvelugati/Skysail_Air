@@ -1,43 +1,47 @@
 const airportsModel = require('../models/airportsModel');
 
-exports.getAllAirports = async (req, res) => {
-  try {
-    const airports = await airportsModel.getAllAirports();
-    res.json(airports);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error fetching airports' });
-  }
-};
+module.exports = (pool) => {
+  return {
+    getAllAirports: async (req, res) => {
+      try {
+        const airports = await airportsModel(pool).getAllAirports();
+        res.json(airports);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error fetching airports' });
+      }
+    },
 
-exports.addAirport = async (req, res) => {
-  try {
-    const newAirport = await airportsModel.addAirport(req.body);
-    res.status(201).json(newAirport);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error adding airport' });
-  }
-};
+    addAirport: async (req, res) => {
+      try {
+        const newAirport = await airportsModel(pool).addAirport(req.body);
+        res.status(201).json(newAirport);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error adding airport' });
+      }
+    },
 
-exports.updateAirport = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const updatedAirport = await airportsModel.updateAirport(id, req.body);
-    res.json(updatedAirport);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error updating airport' });
-  }
-};
+    updateAirport: async (req, res) => {
+      const { id } = req.params;
+      try {
+        const updatedAirport = await airportsModel(pool).updateAirport(id, req.body);
+        res.json(updatedAirport);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error updating airport' });
+      }
+    },
 
-exports.deleteAirport = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const deletedAirport = await airportsModel.deleteAirport(id);
-    res.json(deletedAirport);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error deleting airport' });
-  }
+    deleteAirport: async (req, res) => {
+      const { id } = req.params;
+      try {
+        const deletedAirport = await airportsModel(pool).deleteAirport(id);
+        res.json(deletedAirport);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error deleting airport' });
+      }
+    }
+  };
 };

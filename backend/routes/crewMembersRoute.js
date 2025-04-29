@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const crewMembersController = require('../controllers/crewMembersController');
 
-router.get('/', crewMembersController.getAllCrewMembers);
-router.post('/', crewMembersController.addCrewMember);
-router.put('/:id', crewMembersController.updateCrewMember);
-router.delete('/:id', crewMembersController.deleteCrewMember);
+module.exports = (pool) => {
+  const controller = crewMembersController(pool);
+  router.get('/', controller.getAllCrewMembers);
+  router.post('/', controller.addCrewMember);
+  router.put('/:id', controller.updateCrewMember);
+  router.delete('/:id', controller.deleteCrewMember);
 
-module.exports = router;
+  return router;
+};

@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const seatsController = require('../controllers/seatsController');
 
-router.get('/:flight_id', seatsController.getSeatsByFlightId);
-router.post('/', seatsController.addSeat);
-router.put('/:id', seatsController.updateSeatStatus);
-router.delete('/:id', seatsController.deleteSeat);
+module.exports = (pool) => {
+  const controller = seatsController(pool);
+  router.get('/flight/:flight_id', controller.getSeatsByFlightId);
+  router.post('/', controller.addSeat);
+  router.put('/:id', controller.updateSeatStatus);
+  router.delete('/:id', controller.deleteSeat);
 
-module.exports = router;
+  return router;
+};
