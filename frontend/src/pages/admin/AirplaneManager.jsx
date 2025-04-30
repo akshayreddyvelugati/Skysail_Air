@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import axios from 'axios';
 import { Plus, Edit2, Trash2, X, Check, Search, Plane } from 'lucide-react';
 
 const Container = styled.div`
@@ -157,50 +158,33 @@ const ModalButtons = styled.div`
   margin-top: 2rem;
 `;
 
-// Dummy data
-const initialAirplanes = [
-  {
-    id: '1',
-    model: 'Boeing 737-800',
-    manufacturer: 'Boeing',
-    registration: 'N12345',
-    capacity: 189,
-    status: 'active',
-    manufactureYear: 2018
-  },
-  {
-    id: '2',
-    model: 'Airbus A320neo',
-    manufacturer: 'Airbus',
-    registration: 'N67890',
-    capacity: 180,
-    status: 'active',
-    manufactureYear: 2020
-  },
-  {
-    id: '3',
-    model: 'Boeing 787-9',
-    manufacturer: 'Boeing',
-    registration: 'N11223',
-    capacity: 290,
-    status: 'maintenance',
-    manufactureYear: 2019
-  }
-];
-
 const AirplaneManager = () => {
-  const [airplanes, setAirplanes] = useState(initialAirplanes);
+  const [airplanes, setAirplanes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAirplane, setEditingAirplane] = useState(null);
   const [formData, setFormData] = useState({
     model: '',
     manufacturer: '',
-    registration: '',
+    registration_number: '',
     capacity: 0,
     status: 'active',
-    manufactureYear: new Date().getFullYear()
+    manufacture_year: new Date().getFullYear()
   });
+
+  const fetchAirplanes = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/airplanes');
+      setAirplanes(response.data);
+    } catch (error) {
+      console.error('Error fetching airplanes:', error);
+    }
+  };
+
+  // Fetch airplanes on component mount
+  useEffect(() => {
+    fetchAirplanes();
+  }, []);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -208,7 +192,7 @@ const AirplaneManager = () => {
 
   const filteredAirplanes = airplanes.filter(airplane =>
     airplane.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    airplane.registration.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    airplane.registration_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     airplane.manufacturer.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -217,49 +201,60 @@ const AirplaneManager = () => {
     setFormData({
       model: '',
       manufacturer: '',
-      registration: '',
+      registration_number: '',
       capacity: 0,
       status: 'active',
-      manufactureYear: new Date().getFullYear()
+      manufacture_year: new Date().getFullYear()
     });
     setIsModalOpen(true);
   };
 
   const handleEdit = (airplane) => {
     setEditingAirplane(airplane);
-    setFormData(airplane);
+    setFormData({
+      model: airplane.model,
+      manufacturer: airplane.manufacturer,
+      registration_number: airplane.registration_number,
+      capacity: airplane.capacity,
+      status: airplane.status,
+      manufacture_year: airplane.manufacture_year
+    });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this airplane?')) {
-      setAirplanes(airplanes.filter(airplane => airplane.id !== id));
+      try {
+        await axios.delete(`http://localhost:5000/api/airplanes/${id}`);
+        await fetchAirplanes();
+      } catch (error) {
+        console.error('Error deleting airplane:', error);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingAirplane) {
-      // Update existing airplane
-      setAirplanes(airplanes.map(airplane =>
-        airplane.id === editingAirplane.id ? { ...formData, id: airplane.id } : airplane
-      ));
-    } else {
-      // Add new airplane
-      const newAirplane = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9)
-      };
-      setAirplanes([...airplanes, newAirplane]);
+    try {
+      if (editingAirplane) {
+        // Update existing airplane
+        await axios.put(`http://localhost:5000/api/airplanes/${editingAirplane.id}`, formData);
+      } else {
+        // Add new airplane
+        await axios.post('http://localhost:5000/api/airplanes', formData);
+      }
+      await fetchAirplanes();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error saving airplane:', error);
     }
-    setIsModalOpen(false);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'capacity' || name === 'manufactureYear' ? parseInt(value) : value
+      [name]: name === 'capacity' || name === 'manufacture_year' ? parseInt(value) : value
     }));
   };
 
@@ -296,7 +291,7 @@ const AirplaneManager = () => {
           <tbody>
             {filteredAirplanes.map(airplane => (
               <tr key={airplane.id}>
-                <Td>{airplane.registration}</Td>
+                <Td>{airplane.registration_number}</Td>
                 <Td>{airplane.model}</Td>
                 <Td>{airplane.manufacturer}</Td>
                 <Td>{airplane.capacity}</Td>
@@ -308,7 +303,7 @@ const AirplaneManager = () => {
                     {airplane.status.charAt(0).toUpperCase() + airplane.status.slice(1)}
                   </span>
                 </Td>
-                <Td>{airplane.manufactureYear}</Td>
+                <Td>{airplane.manufacture_year}</Td>
                 <Td>
                   <Actions>
                     <Button onClick={() => handleEdit(airplane)}>
@@ -335,8 +330,8 @@ const AirplaneManager = () => {
                 <Label>Registration Number</Label>
                 <Input
                   type="text"
-                  name="registration"
-                  value={formData.registration}
+                  name="registration_number"
+                  value={formData.registration_number}
                   onChange={handleChange}
                   placeholder="e.g., N12345"
                   required
@@ -392,8 +387,8 @@ const AirplaneManager = () => {
                 <Label>Manufacture Year</Label>
                 <Input
                   type="number"
-                  name="manufactureYear"
-                  value={formData.manufactureYear}
+                  name="manufacture_year"
+                  value={formData.manufacture_year}
                   onChange={handleChange}
                   min="1970"
                   max={new Date().getFullYear()}

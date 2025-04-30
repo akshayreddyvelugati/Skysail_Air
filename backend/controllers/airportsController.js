@@ -18,7 +18,7 @@ module.exports = (pool) => {
         res.status(201).json(newAirport);
       } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Server error adding airport' });
+        res.status(400).json({ error: error.message || 'Server error adding airport' });
       }
     },
 

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import axios from 'axios';
 import { Plus, Edit2, Trash2, X, Check, Search, Users } from 'lucide-react';
 
 const Container = styled.div`
@@ -164,44 +165,27 @@ const ModalButtons = styled.div`
   margin-top: 2rem;
 `;
 
-// Dummy data
-const initialCrewMembers = [
-  {
-    id: '1',
-    firstName: 'John',
-    lastName: 'Smith',
-    position: 'Captain',
-    employeeId: 'EMP001',
-    email: 'john.smith@skysail.com',
-    phone: '+1-555-0123',
-    status: 'active',
-    licenseNumber: 'CPT123456',
-    experience: 15
-  },
-  {
-    id: '2',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    position: 'Flight Attendant',
-    employeeId: 'EMP002',
-    email: 'sarah.johnson@skysail.com',
-    phone: '+1-555-0124',
-    status: 'active',
-    experience: 5
-  }
-];
+const ErrorMessage = styled.p`
+  color: ${props => props.theme.colors.error};
+  margin-top: 0.5rem;
+`;
+
+const LoadingMessage = styled.p`
+  padding: 1rem;
+  text-align: center;
+  color: ${props => props.theme.colors.gray[500]};
+`;
 
 const positions = [
   'Captain',
   'First Officer',
+  'Airhostess',
   'Flight Engineer',
-  'Flight Attendant',
-  'Purser',
   'Ground Staff'
 ];
 
 const CrewManager = () => {
-  const [crewMembers, setCrewMembers] = useState(initialCrewMembers);
+  const [crewMembers, setCrewMembers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCrewMember, setEditingCrewMember] = useState(null);
@@ -216,6 +200,43 @@ const CrewManager = () => {
     licenseNumber: '',
     experience: 0
   });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCrewMembers = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('http://localhost:5000/api/crew-members');
+      console.log('Raw response:', response.data);
+      const mappedCrew = response.data.map(crew => {
+        const mapped = {
+          id: crew.id,
+          firstName: crew.first_name,
+          lastName: crew.last_name,
+          position: crew.position === 'Airhostess' ? 'Flight Attendant' : crew.position,
+          employeeId: crew.employee_id,
+          email: crew.email,
+          phone: crew.phone,
+          status: crew.status.toLowerCase().replace(/\s/g, '-'),
+          experience: crew.experience_years,
+          licenseNumber: crew.license_number
+        };
+        console.log('Mapped crew member:', mapped);
+        return mapped;
+      });
+      setCrewMembers(mappedCrew);
+    } catch (error) {
+      console.error('Error fetching crew members:', error);
+      console.log('Error response:', error.response);
+      setError('Failed to fetch crew members');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCrewMembers();
+  }, []);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -240,37 +261,62 @@ const CrewManager = () => {
       licenseNumber: '',
       experience: 0
     });
+    setError(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (crewMember) => {
     setEditingCrewMember(crewMember);
     setFormData(crewMember);
+    setError(null);
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this crew member?')) {
-      setCrewMembers(crewMembers.filter(crew => crew.id !== id));
+      try {
+        await axios.delete(`http://localhost:5000/api/crew-members/${id}`);
+        await fetchCrewMembers();
+      } catch (error) {
+        console.error('Error deleting crew member:', error);
+        setError('Failed to delete crew member');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (editingCrewMember) {
-      setCrewMembers(crewMembers.map(crew => 
-        crew.id === editingCrewMember.id ? { ...formData, id: crew.id } : crew
-      ));
-    } else {
-      const newCrewMember = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9)
-      };
-      setCrewMembers([...crewMembers, newCrewMember]);
+    // Validate licenseNumber for Captain and First Officer
+    if ((formData.position === 'Captain' || formData.position === 'First Officer') && !formData.licenseNumber) {
+      setError('License number is required for Captain and First Officer');
+      return;
     }
-    
-    setIsModalOpen(false);
+    const dataToSend = {
+      employee_id: formData.employeeId,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      position: formData.position === 'Flight Attendant' ? 'Airhostess' : formData.position,
+      email: formData.email,
+      phone: formData.phone,
+      experience_years: formData.experience,
+      status: formData.status,
+      license_number: formData.licenseNumber || null
+    };
+
+    try {
+      console.log('Sending data to backend:', dataToSend);
+      if (editingCrewMember) {
+        await axios.put(`http://localhost:5000/api/crew-members/${editingCrewMember.id}`, dataToSend);
+      } else {
+        await axios.post('http://localhost:5000/api/crew-members', dataToSend);
+      }
+      await fetchCrewMembers();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error saving crew member:', error);
+      console.log('Error response:', error.response);
+      setError(error.response?.data?.error || 'Failed to save crew member');
+    }
   };
 
   const handleChange = (e) => {
@@ -300,51 +346,59 @@ const CrewManager = () => {
           </Button>
         </Header>
 
-        <Table>
-          <thead>
-            <tr>
-              <Th>Employee ID</Th>
-              <Th>Name</Th>
-              <Th>Position</Th>
-              <Th>Contact</Th>
-              <Th>Status</Th>
-              <Th>Experience</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCrewMembers.map(crew => (
-              <tr key={crew.id}>
-                <Td>{crew.employeeId}</Td>
-                <Td>{crew.firstName} {crew.lastName}</Td>
-                <Td>{crew.position}</Td>
-                <Td>
-                  <div>{crew.email}</div>
-                  <div className="text-sm text-gray-500">{crew.phone}</div>
-                </Td>
-                <Td>
-                  <span style={{ 
-                    color: crew.status === 'active' ? '#10B981' : 
-                           crew.status === 'on-leave' ? '#F59E0B' : '#6366F1'
-                  }}>
-                    {crew.status.charAt(0).toUpperCase() + crew.status.slice(1)}
-                  </span>
-                </Td>
-                <Td>{crew.experience} years</Td>
-                <Td>
-                  <Actions>
-                    <Button onClick={() => handleEdit(crew)}>
-                      <Edit2 size={16} />
-                    </Button>
-                    <Button variant="danger" onClick={() => handleDelete(crew.id)}>
-                      <Trash2 size={16} />
-                    </Button>
-                  </Actions>
-                </Td>
+        {loading ? (
+          <LoadingMessage>Loading...</LoadingMessage>
+        ) : filteredCrewMembers.length === 0 ? (
+          <LoadingMessage>No crew members found</LoadingMessage>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Employee ID</Th>
+                <Th>Name</Th>
+                <Th>Position</Th>
+                <Th>Contact</Th>
+                <Th>Status</Th>
+                <Th>Experience</Th>
+                <Th>License Number</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {filteredCrewMembers.map(crew => (
+                <tr key={crew.id}>
+                  <Td>{crew.employeeId}</Td>
+                  <Td>{crew.firstName} {crew.lastName}</Td>
+                  <Td>{crew.position}</Td>
+                  <Td>
+                    <div>{crew.email}</div>
+                    <div className="text-sm text-gray-500">{crew.phone}</div>
+                  </Td>
+                  <Td>
+                    <span style={{ 
+                      color: crew.status === 'active' ? '#10B981' : 
+                             crew.status === 'on-leave' ? '#F59E0B' : '#6366F1'
+                    }}>
+                      {crew.status.charAt(0).toUpperCase() + crew.status.slice(1)}
+                    </span>
+                  </Td>
+                  <Td>{crew.experience} years</Td>
+                  <Td>{crew.licenseNumber || '-'}</Td>
+                  <Td>
+                    <Actions>
+                      <Button onClick={() => handleEdit(crew)}>
+                        <Edit2 size={16} />
+                      </Button>
+                      <Button variant="danger" onClick={() => handleDelete(crew.id)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </Actions>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
       </Container>
 
       {isModalOpen && (
@@ -384,8 +438,8 @@ const CrewManager = () => {
                 >
                   <option value="">Select position</option>
                   {positions.map(pos => (
-                    <option key={pos} value={pos}>
-                      {pos}
+                    <option key={pos} value={pos === 'Airhostess' ? 'Flight Attendant' : pos}>
+                      {pos === 'Airhostess' ? 'Flight Attendant' : pos}
                     </option>
                   ))}
                 </Select>
@@ -433,7 +487,7 @@ const CrewManager = () => {
                   <option value="training">Training</option>
                 </Select>
               </FormGroup>
-              {formData.position === 'Captain' || formData.position === 'First Officer' ? (
+              {(formData.position === 'Captain' || formData.position === 'First Officer') && (
                 <FormGroup>
                   <Label>License Number</Label>
                   <Input
@@ -444,7 +498,7 @@ const CrewManager = () => {
                     required
                   />
                 </FormGroup>
-              ) : null}
+              )}
               <FormGroup>
                 <Label>Experience (years)</Label>
                 <Input
@@ -456,6 +510,7 @@ const CrewManager = () => {
                   required
                 />
               </FormGroup>
+              {error && <ErrorMessage>{error}</ErrorMessage>}
               <ModalButtons>
                 <Button onClick={() => setIsModalOpen(false)}>
                   <X size={18} />

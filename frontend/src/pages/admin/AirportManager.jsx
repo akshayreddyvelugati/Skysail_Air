@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import axios from 'axios';
 import { Plus, Edit2, Trash2, X, Check, Search } from 'lucide-react';
 
 const Container = styled.div`
@@ -157,17 +158,13 @@ const ModalButtons = styled.div`
   margin-top: 2rem;
 `;
 
-// Dummy data
-const initialAirports = [
-  { id: '1', code: 'JFK', name: 'John F. Kennedy International', city: 'New York', country: 'USA', terminals: 6 },
-  { id: '2', code: 'LAX', name: 'Los Angeles International', city: 'Los Angeles', country: 'USA', terminals: 9 },
-  { id: '3', code: 'LHR', name: 'London Heathrow', city: 'London', country: 'UK', terminals: 5 },
-  { id: '4', code: 'DXB', name: 'Dubai International', city: 'Dubai', country: 'UAE', terminals: 3 },
-  { id: '5', code: 'SIN', name: 'Singapore Changi', city: 'Singapore', country: 'Singapore', terminals: 4 },
-];
+const ErrorMessage = styled.p`
+  color: ${props => props.theme.colors.error};
+  margin-top: 0.5rem;
+`;
 
 const AirportManager = () => {
-  const [airports, setAirports] = useState(initialAirports);
+  const [airports, setAirports] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAirport, setEditingAirport] = useState(null);
@@ -178,6 +175,20 @@ const AirportManager = () => {
     country: '',
     terminals: 1
   });
+  const [error, setError] = useState(null); // New state for error messages
+
+  const fetchAirports = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/airports');
+      setAirports(response.data);
+    } catch (error) {
+      console.error('Error fetching airports:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAirports();
+  }, []);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -192,37 +203,44 @@ const AirportManager = () => {
   const handleAdd = () => {
     setEditingAirport(null);
     setFormData({ code: '', name: '', city: '', country: '', terminals: 1 });
+    setError(null); // Clear error when opening modal
     setIsModalOpen(true);
   };
 
   const handleEdit = (airport) => {
     setEditingAirport(airport);
     setFormData(airport);
+    setError(null); // Clear error when opening modal
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this airport?')) {
-      setAirports(airports.filter(airport => airport.id !== id));
+      try {
+        await axios.delete(`http://localhost:5000/api/airports/${id}`);
+        await fetchAirports();
+      } catch (error) {
+        console.error('Error deleting airport:', error);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingAirport) {
-      // Update existing airport
-      setAirports(airports.map(airport =>
-        airport.id === editingAirport.id ? { ...formData, id: airport.id } : airport
-      ));
-    } else {
-      // Add new airport
-      const newAirport = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9)
-      };
-      setAirports([...airports, newAirport]);
+    try {
+      if (editingAirport) {
+        // Update existing airport
+        await axios.put(`http://localhost:5000/api/airports/${editingAirport.id}`, formData);
+      } else {
+        // Add new airport
+        await axios.post('http://localhost:5000/api/airports', formData);
+      }
+      await fetchAirports();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error saving airport:', error);
+      setError(error.response?.data?.error || 'Failed to save airport');
     }
-    setIsModalOpen(false);
   };
 
   const handleChange = (e) => {
