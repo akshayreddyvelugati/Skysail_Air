@@ -50,53 +50,7 @@ CREATE TABLE crew_members (
         (position NOT IN ('Captain', 'First Officer') AND license_number IS NULL)
     )
 );
-
---PASSENGERS
-CREATE TABLE passengers (
-    id SERIAL PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    phone VARCHAR(20),
-    date_of_birth DATE,
-    gender VARCHAR(10) CHECK (gender IN ('Male', 'Female', 'Other')),
-    nationality VARCHAR(50),
-    meal_preference VARCHAR(30) CHECK (meal_preference IN ('Vegetarian', 'Non-Vegetarian', 'Vegan')),
-    passport_number VARCHAR(20)
-);
-
---SEATS 
-CREATE TABLE seats (
-    id SERIAL PRIMARY KEY,
-    flight_id INTEGER REFERENCES flights(id) ON DELETE CASCADE,
-    seat_number VARCHAR(10) NOT NULL,
-    seat_type VARCHAR(20) DEFAULT 'Middle' CHECK (seat_type IN ('Window', 'Aisle', 'Middle')),
-    status VARCHAR(20) DEFAULT 'Available' CHECK (status IN ('Available', 'Occupied'))
-);
-
---BOOKINGS 
-CREATE TABLE bookings (
-    id SERIAL PRIMARY KEY,
-    booking_id VARCHAR(30) UNIQUE NOT NULL, -- system-generated (like SKS-2435)
-    flight_id INTEGER REFERENCES flights(id) ON DELETE CASCADE,
-    passenger_id INTEGER REFERENCES passengers(id) ON DELETE CASCADE,
-    seat_id INTEGER REFERENCES seats(id) ON DELETE SET NULL,
-    booking_status VARCHAR(20) DEFAULT 'Confirmed' CHECK (booking_status IN ('Confirmed', 'Cancelled', 'Checked-in')),
-    total_price DECIMAL(10, 2)
-);
-
---CONTACT 
-CREATE TABLE messages (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    subject VARCHAR(50) NOT NULL CHECK (subject IN ('Booking Inquiry', 'Change Request', 'Refund Request', 'Feedback', 'Other')),
-    message TEXT NOT NULL,
-    consent BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-
+---------------------------------------------------------------------
 --Insert Data
 
 -- Insert Domestic Airports (8)
@@ -174,42 +128,6 @@ INSERT INTO crew_members (employee_id, first_name, last_name, position, email, p
 ('EMP129', 'Nisha', 'Reddy', 'Ground Staff', 'nisha.reddy@airline.com', '+919876543268', NULL, 2, 'Training'),
 ('EMP130', 'Aditya', 'Kapoor', 'Airhostess', 'aditya.kapoor@airline.com', '+919876543269', NULL, 5, 'Active');
 
-
-
--- Insert Passengers (50)
-INSERT INTO passengers (first_name, last_name, email, phone, date_of_birth, gender, nationality, meal_preference, passport_number) VALUES
-('Aarav', 'Sharma', 'aarav.sharma@gmail.com', '+919876543301', '1990-03-15', 'Male', 'India', 'Vegetarian', 'A1234567'),
-('Priya', 'Verma', 'priya.verma@gmail.com', '+919876543302', '1985-07-22', 'Female', 'India', 'Non-Vegetarian', 'B2345678'),
-('John', 'Smith', 'john.smith@gmail.com', '+12025550123', '1978-11-10', 'Male', 'United States', 'Vegan', 'C3456789'),
-('Emma', 'Wilson', 'emma.wilson@gmail.com', '+447700900123', '1992-04-05', 'Female', 'United Kingdom', 'Vegetarian', 'D4567890'),
-('Ravi', 'Patel', 'ravi.patel@gmail.com', '+919876543303', '1988-09-12', 'Male', 'India', 'Non-Vegetarian', 'E5678901'),
-('Anjali', 'Singh', 'anjali.singh@gmail.com', '+919876543304', '1995-01-30', 'Female', 'India', 'Vegetarian', 'F6789012'),
-('Hiroshi', 'Tanaka', 'hiroshi.tanaka@gmail.com', '+81312345678', '1980-06-25', 'Male', 'Japan', 'Non-Vegetarian', 'G7890123'),
-('Sophie', 'Dubois', 'sophie.dubois@gmail.com', '+33123456789', '1993-08-18', 'Female', 'France', 'Vegan', 'H8901234'),
-('Vikram', 'Kumar', 'vikram.kumar@gmail.com', '+919876543305', '1987-12-03', 'Male', 'India', 'Vegetarian', 'I9012345'),
-('Neha', 'Gupta', 'neha.gupta@gmail.com', '+919876543306', '1990-05-20', 'Female', 'India', 'Non-Vegetarian', 'J0123456'),
-('Ahmed', 'Khan', 'ahmed.khan@gmail.com', '+971501234567', '1985-02-14', 'Male', 'United Arab Emirates', 'Non-Vegetarian', 'K1234567'),
-('Lina', 'Chen', 'lina.chen@gmail.com', '+85212345678', '1991-10-09', 'Female', 'Hong Kong', 'Vegetarian', 'L2345678'),
-('Sanjay', 'Mehta', 'sanjay.mehta@gmail.com', '+919876543307', '1983-03-27', 'Male', 'India', 'Vegan', 'M3456789'),
-('Pooja', 'Rao', 'pooja.rao@gmail.com', '+919876543308', '1994-07-16', 'Female', 'India', 'Vegetarian', 'N4567890'),
-('Michael', 'Brown', 'michael.brown@gmail.com', '+12025550124', '1975-11-01', 'Male', 'United States', 'Non-Vegetarian', 'O5678901'),
-('Aisha', 'Rahman', 'aisha.rahman@gmail.com', '+97412345678', '1989-09-08', 'Female', 'Qatar', 'Vegetarian', 'P6789012'),
-('Arjun', 'Nair', 'arjun.nair@gmail.com', '+919876543309', '1992-04-22', 'Male', 'India', 'Non-Vegetarian', 'Q7890123'),
-('Kavita', 'Joshi', 'kavita.joshi@gmail.com', '+919876543310', '1986-06-13', 'Female', 'India', 'Vegan', 'R8901234'),
-('Wei', 'Li', 'wei.li@gmail.com', '+861234567890', '1984-12-30', 'Male', 'China', 'Vegetarian', 'S9012345'),
-('Clara', 'Müller', 'clara.muller@gmail.com', '+491234567890', '1990-02-17', 'Female', 'Germany', 'Non-Vegetarian', 'T0123456'),
-('Rohan', 'Desai', 'rohan.desai@gmail.com', '+919876543311', '1988-08-05', 'Male', 'India', 'Vegetarian', 'U1234567'),
-('Shalini', 'Reddy', 'shalini.reddy@gmail.com', '+919876543312', '1993-03-12', 'Female', 'India', 'Non-Vegetarian', 'V2345678'),
-('James', 'Taylor', 'james.taylor@gmail.com', '+447700900124', '1982-10-19', 'Male', 'United Kingdom', 'Vegan', 'W3456789'),
-('Fatima', 'Ali', 'fatima.ali@gmail.com', '+971501234568', '1991-05-26', 'Female', 'United Arab Emirates', 'Vegetarian', 'X4567890'),
-('Karan', 'Bose', 'karan.bose@gmail.com', '+919876543313', '1987-01-04', 'Male', 'India', 'Non-Vegetarian', 'Y5678901'),
-('Meera', 'Kapoor', 'meera.kapoor@gmail.com', '+919876543314', '1994-09-21', 'Female', 'India', 'Vegetarian', 'Z6789012'),
-('David', 'Lee', 'david.lee@gmail.com', '+82212345678', '1980-07-08', 'Male', 'South Korea', 'Non-Vegetarian', 'A7890123'),
-('Anita', 'Yadav', 'anita.yadav@gmail.com', '+919876543315', '1989-11-15', 'Female', 'India', 'Vegan', 'B8901234'),
-('Omar', 'Hassan', 'omar.hassan@gmail.com', '+97412345679', '1985-04-02', 'Male', 'Qatar', 'Non-Vegetarian', 'C9012345'),
-('Sofia', 'Lopez', 'sofia.lopez@gmail.com', '+61212345678', '1992-12-29', 'Female', 'Australia', 'Vegetarian', 'D0123456'),
-('Aditya', 'Rao', 'aditya.rao@gmail.com', '+919876543316', '1986-02-10', 'Male', 'India', 'Non-Vegetarian', 'E1234567');
-
 --FLIGHTS 
 
 CREATE TABLE flights (
@@ -252,3 +170,110 @@ JOIN airports a1 ON f.origin_airport_id = a1.id
 JOIN airports a2 ON f.destination_airport_id = a2.id
 JOIN airplanes p ON f.aircraft_id = p.id
 ORDER BY f.departure_date, f.departure_time;
+
+                               --Domestic flights
+INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, aircraft_id, departure_date, departure_time, arrival_time, status, price)
+VALUES 
+('SKD001', 2, 3, 3, '2025-05-12', '06:30:00', '11:15:00', 'Scheduled', 6172),
+('SKD002', 6, 7, 5, '2025-05-02', '17:45:00', '21:30:00', 'Scheduled', 5425),
+('SKD003', 4, 3, 2, '2025-05-16', '04:30:00', '09:45:00', 'Scheduled', 7986),
+('SKD004', 5, 1, 3, '2025-06-13', '13:15:00', '17:30:00', 'Scheduled', 5244),
+('SKD005', 4, 7, 3, '2025-06-12', '13:30:00', '16:00:00', 'Scheduled', 7326),
+('SKD006', 6, 1, 2, '2025-06-02', '20:15:00', '00:00:00', 'Scheduled', 5027),
+('SKD007', 3, 5, 2, '2025-05-28', '01:15:00', '03:30:00', 'Scheduled', 8067),
+('SKD008', 4, 1, 2, '2025-06-25', '01:15:00', '06:45:00', 'Scheduled', 8106),
+('SKD009', 7, 3, 3, '2025-06-14', '14:45:00', '20:45:00', 'Scheduled', 5827),
+('SKD010', 1, 3, 5, '2025-05-12', '06:15:00', '09:30:00', 'Scheduled', 8372);
+
+                                 --International flights
+INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, aircraft_id, departure_date, departure_time, arrival_time, status, price)
+VALUES 
+('SKI001', 7, 17, 9, '2025-07-08', '01:30:00', '07:00:00', 'Scheduled', 31390),
+('SKI002', 5, 10, 6, '2025-08-11', '04:45:00', '08:15:00', 'Scheduled', 44560),
+('SKI003', 7, 21, 7, '2025-07-01', '04:15:00', '08:30:00', 'Scheduled', 40522),
+('SKI004', 6, 12, 9, '2025-08-26', '01:30:00', '05:30:00', 'Scheduled', 34982),
+('SKI005', 4, 19, 8, '2025-08-27', '01:15:00', '07:30:00', 'Scheduled', 49456),
+('SKI006', 8, 11, 10, '2025-08-01', '03:00:00', '07:30:00', 'Scheduled', 25607),
+('SKI007', 6, 16, 10, '2025-08-27', '02:15:00', '07:00:00', 'Scheduled', 19730),
+('SKI008', 5, 10, 9, '2025-07-06', '01:45:00', '07:15:00', 'Scheduled', 37170),
+('SKI009', 1, 20, 10, '2025-07-08', '04:00:00', '07:00:00', 'Scheduled', 38332),
+('SKI010', 6, 23, 10, '2025-08-15', '01:45:00', '05:15:00', 'Scheduled', 28660);
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+--PASSENGERS
+
+--BOOKINGS 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--SEATS 
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    flight_id INTEGER REFERENCES flights(id) ON DELETE CASCADE,
+    seat_number VARCHAR(10) NOT NULL,
+    seat_type VARCHAR(20) DEFAULT 'Middle' CHECK (seat_type IN ('Window', 'Aisle', 'Middle')),
+    status VARCHAR(20) DEFAULT 'Available' CHECK (status IN ('Available', 'Occupied'))
+);
+
+--CONTACT 
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    subject VARCHAR(50) NOT NULL CHECK (subject IN ('Booking Inquiry', 'Change Request', 'Refund Request', 'Feedback', 'Other')),
+    message TEXT NOT NULL,
+    consent BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+
+
+-- Insert Passengers (50)
+INSERT INTO passengers (first_name, last_name, email, phone, date_of_birth, gender, nationality, meal_preference, passport_number) VALUES
+('Aarav', 'Sharma', 'aarav.sharma@gmail.com', '+919876543301', '1990-03-15', 'Male', 'India', 'Vegetarian', 'A1234567'),
+('Priya', 'Verma', 'priya.verma@gmail.com', '+919876543302', '1985-07-22', 'Female', 'India', 'Non-Vegetarian', 'B2345678'),
+('John', 'Smith', 'john.smith@gmail.com', '+12025550123', '1978-11-10', 'Male', 'United States', 'Vegan', 'C3456789'),
+('Emma', 'Wilson', 'emma.wilson@gmail.com', '+447700900123', '1992-04-05', 'Female', 'United Kingdom', 'Vegetarian', 'D4567890'),
+('Ravi', 'Patel', 'ravi.patel@gmail.com', '+919876543303', '1988-09-12', 'Male', 'India', 'Non-Vegetarian', 'E5678901'),
+('Anjali', 'Singh', 'anjali.singh@gmail.com', '+919876543304', '1995-01-30', 'Female', 'India', 'Vegetarian', 'F6789012'),
+('Hiroshi', 'Tanaka', 'hiroshi.tanaka@gmail.com', '+81312345678', '1980-06-25', 'Male', 'Japan', 'Non-Vegetarian', 'G7890123'),
+('Sophie', 'Dubois', 'sophie.dubois@gmail.com', '+33123456789', '1993-08-18', 'Female', 'France', 'Vegan', 'H8901234'),
+('Vikram', 'Kumar', 'vikram.kumar@gmail.com', '+919876543305', '1987-12-03', 'Male', 'India', 'Vegetarian', 'I9012345'),
+('Neha', 'Gupta', 'neha.gupta@gmail.com', '+919876543306', '1990-05-20', 'Female', 'India', 'Non-Vegetarian', 'J0123456'),
+('Ahmed', 'Khan', 'ahmed.khan@gmail.com', '+971501234567', '1985-02-14', 'Male', 'United Arab Emirates', 'Non-Vegetarian', 'K1234567'),
+('Lina', 'Chen', 'lina.chen@gmail.com', '+85212345678', '1991-10-09', 'Female', 'Hong Kong', 'Vegetarian', 'L2345678'),
+('Sanjay', 'Mehta', 'sanjay.mehta@gmail.com', '+919876543307', '1983-03-27', 'Male', 'India', 'Vegan', 'M3456789'),
+('Pooja', 'Rao', 'pooja.rao@gmail.com', '+919876543308', '1994-07-16', 'Female', 'India', 'Vegetarian', 'N4567890'),
+('Michael', 'Brown', 'michael.brown@gmail.com', '+12025550124', '1975-11-01', 'Male', 'United States', 'Non-Vegetarian', 'O5678901'),
+('Aisha', 'Rahman', 'aisha.rahman@gmail.com', '+97412345678', '1989-09-08', 'Female', 'Qatar', 'Vegetarian', 'P6789012'),
+('Arjun', 'Nair', 'arjun.nair@gmail.com', '+919876543309', '1992-04-22', 'Male', 'India', 'Non-Vegetarian', 'Q7890123'),
+('Kavita', 'Joshi', 'kavita.joshi@gmail.com', '+919876543310', '1986-06-13', 'Female', 'India', 'Vegan', 'R8901234'),
+('Wei', 'Li', 'wei.li@gmail.com', '+861234567890', '1984-12-30', 'Male', 'China', 'Vegetarian', 'S9012345'),
+('Clara', 'Müller', 'clara.muller@gmail.com', '+491234567890', '1990-02-17', 'Female', 'Germany', 'Non-Vegetarian', 'T0123456'),
+('Rohan', 'Desai', 'rohan.desai@gmail.com', '+919876543311', '1988-08-05', 'Male', 'India', 'Vegetarian', 'U1234567'),
+('Shalini', 'Reddy', 'shalini.reddy@gmail.com', '+919876543312', '1993-03-12', 'Female', 'India', 'Non-Vegetarian', 'V2345678'),
+('James', 'Taylor', 'james.taylor@gmail.com', '+447700900124', '1982-10-19', 'Male', 'United Kingdom', 'Vegan', 'W3456789'),
+('Fatima', 'Ali', 'fatima.ali@gmail.com', '+971501234568', '1991-05-26', 'Female', 'United Arab Emirates', 'Vegetarian', 'X4567890'),
+('Karan', 'Bose', 'karan.bose@gmail.com', '+919876543313', '1987-01-04', 'Male', 'India', 'Non-Vegetarian', 'Y5678901'),
+('Meera', 'Kapoor', 'meera.kapoor@gmail.com', '+919876543314', '1994-09-21', 'Female', 'India', 'Vegetarian', 'Z6789012'),
+('David', 'Lee', 'david.lee@gmail.com', '+82212345678', '1980-07-08', 'Male', 'South Korea', 'Non-Vegetarian', 'A7890123'),
+('Anita', 'Yadav', 'anita.yadav@gmail.com', '+919876543315', '1989-11-15', 'Female', 'India', 'Vegan', 'B8901234'),
+('Omar', 'Hassan', 'omar.hassan@gmail.com', '+97412345679', '1985-04-02', 'Male', 'Qatar', 'Non-Vegetarian', 'C9012345'),
+('Sofia', 'Lopez', 'sofia.lopez@gmail.com', '+61212345678', '1992-12-29', 'Female', 'Australia', 'Vegetarian', 'D0123456'),
+('Aditya', 'Rao', 'aditya.rao@gmail.com', '+919876543316', '1986-02-10', 'Male', 'India', 'Non-Vegetarian', 'E1234567');
+

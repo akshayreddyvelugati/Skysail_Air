@@ -21,6 +21,7 @@ const seatsRoute = require('./routes/seatsRoute');
 const passengersRoute = require('./routes/passengersRoute');
 const bookingsRoute = require('./routes/bookingsRoute');
 const messagesRoute = require('./routes/messagesRoute');
+const passengerBookingsRoute = require('./routes/passengerBookingsRoute');
 app.use('/api/airports', airportsRoute(pool));
 app.use('/api/airplanes', airplanesRoute(pool)); 
 app.use('/api/flights', flightsRoute(pool));
@@ -29,6 +30,7 @@ app.use('/api/seats', seatsRoute(pool));
 app.use('/api/passengers', passengersRoute(pool));
 app.use('/api/bookings', bookingsRoute(pool));
 app.use('/api/messages', messagesRoute(pool));
+app.use('/api/passenger-bookings', passengerBookingsRoute(pool));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

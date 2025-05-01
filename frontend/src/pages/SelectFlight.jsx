@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { Plane, User, Calendar, Clock } from 'lucide-react';
-import StepFlow from './StepFlow'; // Import the StepFlow component
+import axios from 'axios';
+import StepFlow from './StepFlow';
+import { Calendar, Clock, Plane } from 'lucide-react';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -10,55 +11,88 @@ const Container = styled.div`
   padding: 2rem;
 `;
 
-const FlightDetails = styled.div`
+const FlightSummary = styled.div`
   background: white;
   border-radius: 1rem;
-  box-shadow: ${props => props.theme.shadows.md};
-  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
   margin-bottom: 2rem;
 `;
 
-const Title = styled.h1`
-  color: ${props => props.theme.colors.primary};
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
-`;
-
 const FlightInfo = styled.div`
-  display: grid;
-  gap: 2rem;
-  @media (min-width: ${props => props.theme.breakpoints.md}) {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 `;
 
-const InfoItem = styled.div`
+const Route = styled.div`
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: ${props => props.theme.colors.gray[700]};
-  font-size: 1.125rem;
+  font-size: 1.25rem;
+  color: #1f2937;
+`;
+
+const Time = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+`;
+
+const Price = styled.div`
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #3b82f6;
+`;
+
+const FlightDetails = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #6b7280;
+`;
+
+const DetailItem = styled.div`
+  font-size: 1rem;
+  color: #374151;
+`;
+
+const TotalPrice = styled.div`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 1rem;
 `;
 
 const PassengerForm = styled.form`
   background: white;
   border-radius: 1rem;
-  box-shadow: ${props => props.theme.shadows.md};
-  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 `;
 
-const FormTitle = styled.h2`
-  color: ${props => props.theme.colors.primary};
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
+const PassengerSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `;
 
-const FormGrid = styled.div`
-  display: grid;
-  gap: 1.5rem;
-  @media (min-width: ${props => props.theme.breakpoints.md}) {
-    grid-template-columns: repeat(2, 1fr);
-  }
+const PassengerHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const PassengerTitle = styled.h3`
+  color: #3b82f6;
+  font-size: 1.25rem;
 `;
 
 const FormGroup = styled.div`
@@ -68,123 +102,72 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  color: ${props => props.theme.colors.gray[700]};
+  color: #4b5563;
   font-weight: 500;
 `;
 
 const Input = styled.input`
-  padding: 0.75rem;
-  border: 1px solid ${props => props.theme.colors.gray[300]};
-  border-radius: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
   font-size: 1rem;
-  height: 2.5rem;
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.colors.secondary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
   }
 `;
 
 const Select = styled.select`
-  padding: 0.75rem;
-  border: 1px solid ${props => props.theme.colors.gray[300]};
-  border-radius: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
   font-size: 1rem;
-  background-color: white;
-  height: 2.5rem;
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.colors.secondary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
   }
 `;
 
-const Button = styled.button`
-  background: ${props => props.theme.gradients.primary};
+const ErrorMessage = styled.span`
+  color: #ef4444;
+  font-size: 0.875rem;
+`;
+
+const ContinueButton = styled.button`
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
   color: white;
   padding: 1rem 2rem;
   border-radius: 0.5rem;
   font-weight: 600;
   font-size: 1.125rem;
-  width: 100%;
   margin-top: 2rem;
   transition: transform 0.2s;
   &:hover {
     transform: translateY(-2px);
   }
-`;
-
-const Price = styled.div`
-  text-align: right;
-  font-size: 1.5rem;
-  color: ${props => props.theme.colors.primary};
-  font-weight: 600;
-  margin-top: 1rem;
-`;
-
-const PassengerSection = styled.div`
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid ${props => props.theme.colors.gray[300]};
-  &:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
+  &:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
   }
 `;
 
-const DebugInfo = styled.div`
-  background: #f8f9fa;
+const LoadingMessage = styled.div`
+  text-align: center;
   padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 0.5rem;
-  font-family: monospace;
+  color: #6b7280;
 `;
-
-const ErrorMessage = styled.div`
-  color: ${props => props.theme.colors.red || 'red'};
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-`;
-
-const ErrorText = styled.div`
-  color: red;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-`;
-
-const initialFlights = [
-  { id: 'SK001', from: 'JFK', to: 'LAX', departureTime: '08:00', arrivalTime: '11:30', duration: '3h 30m', price: 299, airline: 'SkySail Airlines', date: '2024-03-25' },
-  { id: 'AA101', from: 'JFK', to: 'LAX', departureTime: '09:00', arrivalTime: '12:45', duration: '3h 45m', price: 329, airline: 'American Airlines', date: '2024-03-25' },
-  { id: 'UA201', from: 'JFK', to: 'LAX', departureTime: '13:00', arrivalTime: '16:30', duration: '3h 30m', price: 359, airline: 'United Airlines', date: '2024-03-25' },
-];
-
-const initialReturnFlights = [
-  { id: 'SK004', from: 'LAX', to: 'JFK', departureTime: '14:00', arrivalTime: '21:00', duration: '4h 0m', price: 349, airline: 'SkySail Airlines', date: '2024-03-27' },
-  { id: 'AA104', from: 'LAX', to: 'JFK', departureTime: '15:00', arrivalTime: '22:30', duration: '4h 30m', price: 379, airline: 'American Airlines', date: '2024-03-27' },
-  { id: 'UA204', from: 'LAX', to: 'JFK', departureTime: '18:00', arrivalTime: '01:00', duration: '4h 0m', price: 399, airline: 'United Airlines', date: '2024-03-27' },
-];
-
-const flightsData = [...initialFlights, ...initialReturnFlights];
 
 const SelectFlight = () => {
-  const { flightId, departureId, returnId } = useParams();
-  const navigate = useNavigate();
+  const { id } = useParams(); // Get flight ID from URL
   const location = useLocation();
-  
-  const passengerCount = location.state?.passengers ? parseInt(location.state.passengers) : 2;
-  const isRoundTrip = !!returnId; 
-
-  console.log('SelectFlight params:', { flightId, departureId, returnId, passengerCount, isRoundTrip });
-
-  const departureFlightId = departureId || flightId; 
-  const departureFlight = flightsData.find(flight => flight.id === departureFlightId);
-  const returnFlight = returnId ? flightsData.find(flight => flight.id === returnId) : null;
-
-  console.log('Found flights:', { departureFlight, returnFlight });
-
-  const [passengerData, setPassengerData] = useState(() => {
-    return Array(passengerCount).fill().map(() => ({
+  const navigate = useNavigate();
+  const { passengers: passengerCount = 1 } = location.state || {};
+  const [departureFlight, setDepartureFlight] = useState(null);
+  const [error, setError] = useState(null);
+  const [passengerData, setPassengerData] = useState(
+    Array.from({ length: passengerCount }, () => ({
       firstName: '',
       lastName: '',
       email: '',
@@ -196,297 +179,301 @@ const SelectFlight = () => {
       gender: '',
       nationality: '',
       mealPreference: '',
-    }));
-  });
+    }))
+  );
 
   useEffect(() => {
-    const newCount = parseInt(passengerCount);
-    if (passengerData.length !== newCount) {
-      const newData = Array(newCount).fill().map((_, index) => {
-        return index < passengerData.length 
-          ? passengerData[index] 
-          : {
-              firstName: '',
-              lastName: '',
-              email: '',
-              emailError: '',
-              phone: '',
-              phoneError: '',
-              dateOfBirth: '',
-              dateOfBirthError: '',
-              gender: '',
-              nationality: '',
-              mealPreference: '',
-            };
-      });
-      setPassengerData(newData);
-    }
-  }, [passengerCount, passengerData.length]);
-
-  const handleInputChange = (index, event) => {
-    const { name, value } = event.target;
-    const updatedPassengerData = [...passengerData];
-    updatedPassengerData[index] = {
-      ...updatedPassengerData[index],
-      [name]: value,
-      [`${name}Error`]: '' 
-    };
-    if (name === 'dateOfBirth') {
-      const dobRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-      if (value && !dobRegex.test(value)) {
-        updatedPassengerData[index] = {
-          ...updatedPassengerData[index],
-          dateOfBirthError: 'Please enter date in DD/MM/YYYY format.'
-        };
+    const fetchFlight = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/flights/${id}`);
+        const flight = response.data;
+        const airportsResponse = await axios.get('http://localhost:5000/api/airports');
+        const airports = airportsResponse.data;
+        setDepartureFlight({
+          id: flight.id.toString(),
+          from: airports.find(a => a.id === flight.origin_airport_id)?.code || 'Unknown',
+          to: airports.find(a => a.id === flight.destination_airport_id)?.code || 'Unknown',
+          departureTime: flight.departure_time,
+          arrivalTime: flight.arrival_time,
+          duration: calculateDuration(flight.departure_time, flight.arrival_time),
+          price: parseFloat(flight.price),
+          airline: 'SkySail Airlines',
+          departureDate: flight.departure_date,
+          flightNumber: flight.flight_number,
+        });
+      } catch (err) {
+        console.error('Error fetching flight:', err);
+        setError('Departure flight not found for ID: ' + id);
       }
-    }
-    setPassengerData(updatedPassengerData);
+    };
+    fetchFlight();
+  }, [id]);
+
+  const calculateDuration = (departure, arrival) => {
+    const [depHours, depMinutes] = departure.split(':').map(Number);
+    const [arrHours, arrMinutes] = arrival.split(':').map(Number);
+    const dep = new Date(0, 0, 0, depHours, depMinutes);
+    const arr = new Date(0, 0, 0, arrHours, arrMinutes);
+    if (arr < dep) arr.setDate(arr.getDate() + 1);
+    const diff = (arr - dep) / 1000 / 60;
+    const hours = Math.floor(diff / 60);
+    const minutes = diff % 60;
+    return `${hours}h ${minutes}m`;
   };
 
   const validateEmail = (email) => {
-    const emailRegex = /\S+@\S+\.\S+/;
-    return emailRegex.test(email) ? '' : 'Please enter a valid email address.';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email) ? '' : 'Invalid email address';
   };
 
   const validatePhone = (phone) => {
-    const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
-    return phoneRegex.test(phone) ? '' : 'Please enter a valid phone number.';
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    return phoneRegex.test(phone) ? '' : 'Invalid phone number';
   };
 
-  const handleSubmit = (e) => {
+  const validateDateOfBirth = (dob) => {
+    const dobRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(19|20)\d{2}$/;
+    if (!dobRegex.test(dob)) return 'Invalid date format (DD/MM/YYYY)';
+    const [day, month, year] = dob.split('/').map(Number);
+    const dobDate = new Date(year, month - 1, day);
+    const today = new Date();
+    if (isNaN(dobDate.getTime())) return 'Invalid date';
+    return dobDate <= today ? '' : 'Date of birth cannot be in the future';
+  };
+
+  const handleInputChange = (index, field, value) => {
+    const newPassengerData = [...passengerData];
+    newPassengerData[index][field] = value;
+
+    if (field === 'email') {
+      newPassengerData[index].emailError = validateEmail(value);
+    }
+    if (field === 'phone') {
+      newPassengerData[index].phoneError = validatePhone(value);
+    }
+    if (field === 'dateOfBirth') {
+      newPassengerData[index].dateOfBirthError = validateDateOfBirth(value);
+    }
+
+    setPassengerData(newPassengerData);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    let isValid = true;
-    const updatedPassengerDataWithErrors = passengerData.map((passenger) => {
-      const emailError = passenger.email ? validateEmail(passenger.email) : '';
-      const phoneError = passenger.phone ? validatePhone(passenger.phone) : '';
-      const dobRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-      let dateOfBirthError = '';
-      if (passenger.dateOfBirth && !dobRegex.test(passenger.dateOfBirth)) {
-        dateOfBirthError = 'Please enter date in dd/mm/yyyy format.';
-        isValid = false;
-      }
-      if (emailError || phoneError || dateOfBirthError) {
-        isValid = false;
-      }
-      return { ...passenger, emailError, phoneError, dateOfBirthError };
-    });
+    const hasErrors = passengerData.some(p => 
+      p.emailError || 
+      p.phoneError || 
+      p.dateOfBirthError || 
+      !p.firstName || 
+      !p.lastName || 
+      !p.email || 
+      !p.phone || 
+      !p.dateOfBirth || 
+      !p.gender || 
+      !p.nationality
+    );
+    if (hasErrors) {
+      alert('Please fill in all required fields correctly.');
+      return;
+    }
 
-    setPassengerData(updatedPassengerDataWithErrors);
+    try {
+      // Step 1: Save each passenger to the database
+      const passengerPromises = passengerData.map(async (passenger) => {
+        const response = await axios.post('http://localhost:5000/api/passengers', {
+          first_name: passenger.firstName,
+          last_name: passenger.lastName,
+          email: passenger.email,
+          phone: passenger.phone,
+          date_of_birth: passenger.dateOfBirth.split('/').reverse().join('-'),
+          gender: passenger.gender,
+          nationality: passenger.nationality,
+          meal_preference: passenger.mealPreference || null,
+          passport_number: null,
+        });
+        return response.data;
+      });
 
-    if (isValid) {
-      const formattedPassengerData = passengerData.map(passenger => ({
-        ...passenger,
-        dateOfBirth: passenger.dateOfBirth || '',
-      }));
-      sessionStorage.setItem('passengerData', JSON.stringify(formattedPassengerData));
-      const seatSelectionUrl = isRoundTrip 
-        ? `/seat-selection/${departureFlightId}/${returnId}`
-        : `/seat-selection/${departureFlightId}`;
-      console.log('Navigating to seat selection:', seatSelectionUrl); 
-      navigate(seatSelectionUrl, { state: { passengers: passengerCount, isRoundTrip } });
+      const savedPassengers = await Promise.all(passengerPromises);
+
+      // Step 2: Create a booking with a generated booking_id
+      const bookingId = `SKS-${Date.now()}-${Math.floor(Math.random() * 1000)}`.slice(0, 30);
+      const bookingResponse = await axios.post('http://localhost:5000/api/bookings', {
+        booking_id: bookingId,
+        flight_id: parseInt(departureFlight.id),
+        return_flight_id: null,
+        total_price: departureFlight.price * passengerCount,
+        status: 'Confirmed',
+      });
+
+      const booking = bookingResponse.data;
+
+      // Step 3: Link passengers to the booking
+      const passengerBookingPromises = savedPassengers.map(async (passenger) => {
+        await axios.post('http://localhost:5000/api/passenger-bookings', {
+          passenger_id: passenger.id,
+          booking_id: booking.id,
+        });
+      });
+
+      await Promise.all(passengerBookingPromises);
+
+      // Step 4: Prepare booking data for the next step
+      const bookingData = {
+        departureFlight,
+        returnFlight: null,
+        passengers: savedPassengers,
+        bookingId: booking.id,
+        totalPrice: departureFlight.price * passengerCount,
+      };
+      navigate('/seat-selection', { state: bookingData });
+    } catch (err) {
+      console.error('Error saving passengers and booking:', err.response?.data || err.message);
+      alert('Failed to save passenger details and create booking. Please try again.');
     }
   };
 
+  if (error) {
+    return <ErrorMessage>{error}</ErrorMessage>;
+  }
+
   if (!departureFlight) {
-    return (
-      <Container>
-        <StepFlow currentStep={3} /> {/* Add StepFlow here */}
-        <ErrorMessage>
-          Departure flight not found for ID: {departureFlightId || 'none'}
-        </ErrorMessage>
-      </Container>
-    );
+    return <LoadingMessage>Loading flight details...</LoadingMessage>;
   }
-
-  if (isRoundTrip && !returnFlight) {
-    return (
-      <Container>
-        <StepFlow currentStep={3} /> {/* Add StepFlow here */}
-        <ErrorMessage>
-          Return flight not found for ID: {returnId}
-        </ErrorMessage>
-      </Container>
-    );
-  }
-
-  const totalPrice = (departureFlight.price + (returnFlight?.price || 0)) * passengerCount;
 
   return (
     <Container>
-      <StepFlow currentStep={3} /> {/* Add StepFlow here */}
-      <Title>Flight Details</Title>
-      
-      <DebugInfo>
-        Passenger Count: {passengerCount}<br />
-        Passengers in State: {passengerData.length}<br />
-        Trip Type: {isRoundTrip ? 'Round-trip' : 'One-way'}<br />
-        Flight IDs: {departureFlightId}{isRoundTrip ? `, ${returnId}` : ''}
-      </DebugInfo>
-      
-      <FlightDetails>
-        <h2>Departure Flight</h2>
+      <StepFlow currentStep={3} />
+      <FlightSummary>
+        <FlightDetails>
+          <DetailItem><strong>Passenger Count:</strong> {passengerCount}</DetailItem>
+          <DetailItem><strong>Trip Type:</strong> One-way</DetailItem>
+          <DetailItem><strong>Flight ID:</strong> {departureFlight.flightNumber}</DetailItem>
+        </FlightDetails>
         <FlightInfo>
-          <InfoItem>
+          <Route>
             <Plane size={20} />
             {departureFlight.from} → {departureFlight.to}
-          </InfoItem>
-          <InfoItem>
-            <Calendar size={20} />
-            {departureFlight.date}
-          </InfoItem>
-          <InfoItem>
-            <Clock size={20} />
+          </Route>
+          <Time>
+            <Clock size={18} />
             {departureFlight.departureTime} - {departureFlight.arrivalTime} ({departureFlight.duration})
-          </InfoItem>
-          <InfoItem>
-            <User size={20} />
-            {departureFlight.airline}
-          </InfoItem>
+          </Time>
+          <div>{departureFlight.airline}</div>
         </FlightInfo>
-        <Price>${departureFlight.price}</Price>
-      </FlightDetails>
-
-      {isRoundTrip && returnFlight && (
         <FlightDetails>
-          <h2>Return Flight</h2>
-          <FlightInfo>
-            <InfoItem>
-              <Plane size={20} />
-              {returnFlight.from} → {returnFlight.to}
-            </InfoItem>
-            <InfoItem>
-              <Calendar size={20} />
-              {returnFlight.date}
-            </InfoItem>
-            <InfoItem>
-              <Clock size={20} />
-              {returnFlight.departureTime} - {returnFlight.arrivalTime} ({returnFlight.duration})
-            </InfoItem>
-            <InfoItem>
-              <User size={20} />
-              {returnFlight.airline}
-            </InfoItem>
-          </FlightInfo>
-          <Price>${returnFlight.price}</Price>
+          <Time>
+            <Calendar size={18} />
+            {departureFlight.departureDate}
+          </Time>
+          <Price>
+            <span>₹{departureFlight.price}</span>
+          </Price>
         </FlightDetails>
-      )}
-      
-      <Price>Total: ${totalPrice} for {passengerCount} Passenger(s)</Price>
+        <TotalPrice>
+          <strong>TOTAL:</strong> ₹{departureFlight.price * passengerCount} for {passengerCount} Passenger(s)
+        </TotalPrice>
+      </FlightSummary>
 
       <PassengerForm onSubmit={handleSubmit}>
-        <FormTitle>Passenger Information</FormTitle>
-        
-        {passengerData.map((passenger, index) => (
-          <PassengerSection key={index}>
-            <FormTitle>Passenger {index + 1}</FormTitle>
-            <FormGrid>
+        <PassengerSection>
+          {passengerData.map((passenger, index) => (
+            <div key={index}>
+              <PassengerHeader>
+                <PassengerTitle>Passenger {index + 1}</PassengerTitle>
+              </PassengerHeader>
               <FormGroup>
-                <Label htmlFor={`firstName-${index}`}>First Name</Label>
+                <Label>First Name</Label>
                 <Input
                   type="text"
-                  name="firstName"
-                  id={`firstName-${index}`}
                   value={passenger.firstName}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'firstName', e.target.value)}
+                  placeholder="First Name"
                   required
                 />
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`lastName-${index}`}>Last Name</Label>
+                <Label>Last Name</Label>
                 <Input
                   type="text"
-                  name="lastName"
-                  id={`lastName-${index}`}
                   value={passenger.lastName}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'lastName', e.target.value)}
+                  placeholder="Last Name"
                   required
                 />
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`email-${index}`}>Email</Label>
+                <Label>Email</Label>
                 <Input
                   type="email"
-                  name="email"
-                  id={`email-${index}`}
                   value={passenger.email}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'email', e.target.value)}
                   placeholder="Enter your email address"
                   required
                 />
-                {passenger.emailError && <ErrorText>{passenger.emailError}</ErrorText>}
+                {passenger.emailError && <ErrorMessage>{passenger.emailError}</ErrorMessage>}
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`phone-${index}`}>Phone</Label>
+                <Label>Phone</Label>
                 <Input
-                  type="tel"
-                  name="phone"
-                  id={`phone-${index}`}
+                  type="text"
                   value={passenger.phone}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'phone', e.target.value)}
                   placeholder="Enter your phone number"
                   required
                 />
-                {passenger.phoneError && <ErrorText>{passenger.phoneError}</ErrorText>}
+                {passenger.phoneError && <ErrorMessage>{passenger.phoneError}</ErrorMessage>}
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`dateOfBirth-${index}`}>Date of Birth</Label>
+                <Label>Date of Birth</Label>
                 <Input
                   type="text"
-                  name="dateOfBirth"
-                  id={`dateOfBirth-${index}`}
                   value={passenger.dateOfBirth}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'dateOfBirth', e.target.value)}
                   placeholder="DD/MM/YYYY"
                   required
                 />
-                {passenger.dateOfBirthError && <ErrorText>{passenger.dateOfBirthError}</ErrorText>}
+                {passenger.dateOfBirthError && <ErrorMessage>{passenger.dateOfBirthError}</ErrorMessage>}
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`gender-${index}`}>Gender</Label>
+                <Label>Gender</Label>
                 <Select
-                  name="gender"
-                  id={`gender-${index}`}
                   value={passenger.gender}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'gender', e.target.value)}
                   required
                 >
                   <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </Select>
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`nationality-${index}`}>Nationality</Label>
+                <Label>Nationality</Label>
                 <Input
                   type="text"
-                  name="nationality"
-                  id={`nationality-${index}`}
                   value={passenger.nationality}
-                  onChange={(event) => handleInputChange(index, event)}
+                  onChange={(e) => handleInputChange(index, 'nationality', e.target.value)}
+                  placeholder="Nationality"
                   required
                 />
               </FormGroup>
               <FormGroup>
-                <Label htmlFor={`mealPreference-${index}`}>Meal Preference</Label>
+                <Label>Meal Preference</Label>
                 <Select
-                  name="mealPreference"
-                  id={`mealPreference-${index}`}
                   value={passenger.mealPreference}
-                  onChange={(event) => handleInputChange(index, event)}
-                  required
+                  onChange={(e) => handleInputChange(index, 'mealPreference', e.target.value)}
                 >
                   <option value="">Select meal preference</option>
-                  <option value="vegetarian">Vegetarian</option>
-                  <option value="non-vegetarian">Non-Vegetarian</option>
-                  <option value="vegan">Vegan</option>
+                  <option value="Vegetarian">Vegetarian</option>
+                  <option value="Non-Vegetarian">Non-Vegetarian</option>
+                  <option value="Vegan">Vegan</option>
                 </Select>
               </FormGroup>
-            </FormGrid>
-          </PassengerSection>
-        ))}
-        
-        <Button type="submit">Continue to Seat Selection</Button>
+            </div>
+          ))}
+        </PassengerSection>
+        <ContinueButton type="submit">Continue to Seat Selection</ContinueButton>
       </PassengerForm>
     </Container>
   );

@@ -1,3 +1,4 @@
+// bookingsController.js
 const bookingsModel = require('../models/bookingsModel');
 
 module.exports = (pool) => {

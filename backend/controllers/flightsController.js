@@ -1,3 +1,4 @@
+// flightsController.js
 const flightModel = require('../models/flightsModel');
 
 // Input validation
@@ -55,7 +56,12 @@ const flightsController = (pool) => {
 
     getAllFlights: async (req, res) => {
       try {
-        const flights = await flightModel.getAllFlights(pool);
+        const filters = {
+          origin_airport_id: req.query.origin_airport_id,
+          destination_airport_id: req.query.destination_airport_id,
+          departure_date: req.query.departure_date,
+        };
+        const flights = await flightModel.getAllFlights(pool, filters);
         res.status(200).json(flights);
       } catch (error) {
         res.status(500).json({ error: error.message });

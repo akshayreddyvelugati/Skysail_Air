@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Plane, Calendar, Users, ArrowLeftRight } from 'lucide-react';
@@ -6,16 +6,17 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { addMonths } from 'date-fns';
 import StepFlow from './StepFlow';
+import axios from 'axios';
 
 const PageContainer = styled.div`
   min-height: calc(100vh - 64px);
   background-color: #f7f7f7;
   display: flex;
-  flex-direction: column; /* Stack children vertically */
-  align-items: center; /* Center horizontally */
-  justify-content: center; /* Center vertically */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 2rem;
-  width: 100%; /* Ensure it takes full width */
+  width: 100%;
 `;
 
 const SearchCard = styled.div`
@@ -193,11 +194,23 @@ const FlightSearchForm = () => {
     passengers: '1',
     class: 'economy'
   });
+  const [airports, setAirports] = useState([]);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
   const [showReturnPicker, setShowReturnPicker] = useState(false);
   const [airportError, setAirportError] = useState('');
   const today = new Date();
   const maxDate = addMonths(today, 3);
+
+  useEffect(() => {
+    // Fetch airports from the backend
+    axios.get('http://localhost:5000/api/airports')
+      .then(response => {
+        setAirports(response.data);
+      })
+      .catch(error => {
+        console.error('Error fetching airports:', error);
+      });
+  }, []);
 
   const handleTripTypeChange = (type) => {
     setTripType(type);
@@ -286,28 +299,38 @@ const FlightSearchForm = () => {
           <AirportFieldsContainer>
             <FormGroup style={{ flex: 1 }}>
               <Label><Plane size={18} /> From</Label>
-              <Input
-                type="text"
+              <Select
                 name="from"
                 value={formData.from}
                 onChange={handleChange}
-                placeholder="Enter departure airport"
                 required
-              />
+              >
+                <option value="">Select departure airport</option>
+                {airports.map(airport => (
+                  <option key={airport.code} value={airport.code}>
+                    {airport.code} - {airport.name}
+                  </option>
+                ))}
+              </Select>
             </FormGroup>
             <SwitchButton type="button" onClick={handleSwitchAirports}>
               <ArrowLeftRight size={18} />
             </SwitchButton>
             <FormGroup style={{ flex: 1 }}>
               <Label><Plane size={18} /> To</Label>
-              <Input
-                type="text"
+              <Select
                 name="to"
                 value={formData.to}
                 onChange={handleChange}
-                placeholder="Enter arrival airport"
                 required
-              />
+              >
+                <option value="">Select arrival airport</option>
+                {airports.map(airport => (
+                  <option key={airport.code} value={airport.code}>
+                    {airport.code} - {airport.name}
+                  </option>
+                ))}
+              </Select>
             </FormGroup>
           </AirportFieldsContainer>
           {airportError && <p style={{ color: 'red', gridColumn: '1 / -1', marginBottom: '0' }}>{airportError}</p>}

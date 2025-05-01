@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom'; // Single import
 import styled from 'styled-components';
 import { Clock, Plane } from 'lucide-react';
-import StepFlow from './StepFlow'; // Import the StepFlow component
+import StepFlow from './StepFlow';
+import axios from 'axios';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -142,36 +143,160 @@ const BookNowButton = styled.button`
   }
 `;
 
-// Dummy flight data
-const initialFlights = [
-  { id: 'SK001', from: 'JFK', to: 'LAX', departureTime: '08:00', arrivalTime: '11:30', duration: '3h 30m', price: 299, airline: 'SkySail Airlines' },
-  { id: 'AA101', from: 'JFK', to: 'LAX', departureTime: '09:00', arrivalTime: '12:45', duration: '3h 45m', price: 329, airline: 'American Airlines' },
-  { id: 'UA201', from: 'JFK', to: 'LAX', departureTime: '13:00', arrivalTime: '16:30', duration: '3h 30m', price: 359, airline: 'United Airlines' },
-];
+const ErrorMessage = styled.div`
+  color: ${props => props.theme.colors.error || 'red'};
+  text-align: center;
+  padding: 1rem;
+`;
 
-const initialReturnFlights = [
-  { id: 'SK004', from: 'LAX', to: 'JFK', departureTime: '14:00', arrivalTime: '21:00', duration: '4h 0m', price: 349, airline: 'SkySail Airlines' },
-  { id: 'AA104', from: 'LAX', to: 'JFK', departureTime: '15:00', arrivalTime: '22:30', duration: '4h 30m', price: 379, airline: 'American Airlines' },
-  { id: 'UA204', from: 'LAX', to: 'JFK', departureTime: '18:00', arrivalTime: '01:00', duration: '4h 0m', price: 399, airline: 'United Airlines' },
-];
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 1rem;
+  color: ${props => props.theme.colors.gray[500]};
+`;
+
+const DebugInfo = styled.pre`
+  background: #f8f9fa;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  font-family: monospace;
+  white-space: pre-wrap;
+`;
 
 const SearchResults = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const searchParams = location.state || {};
-  const isRoundTrip = searchParams.tripType === 'round-trip';
-  const passengerCount = searchParams.passengers || 1;
-
-  const [flights, setFlights] = useState(initialFlights);
-  const [returnFlights, setReturnFlights] = useState(initialReturnFlights);
+  const location = useLocation();
+  const [flights, setFlights] = useState([]);
+  const [returnFlights, setReturnFlights] = useState([]);
+  const [airports, setAirports] = useState([]);
   const [selectedDepartureFlight, setSelectedDepartureFlight] = useState(null);
   const [selectedReturnFlight, setSelectedReturnFlight] = useState(null);
+  const [passengerCount, setPassengerCount] = useState(1);
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
+  const [showReturnFlights, setShowReturnFlights] = useState(false);
+  const [loadingAirports, setLoadingAirports] = useState(false);
+  const [loadingFlights, setLoadingFlights] = useState(false);
+  const [error, setError] = useState(null);
   const [filterAirline, setFilterAirline] = useState('all');
   const [sortBy, setSortBy] = useState('price');
 
+  const searchParams = location.state || {
+    from: '',
+    to: '',
+    departureDate: '',
+    returnDate: '',
+    class: 'Economy',
+  };
+
   useEffect(() => {
-    let filteredDeparture = [...initialFlights];
-    let filteredReturn = [...initialReturnFlights];
+    setIsRoundTrip(!!searchParams.returnDate);
+  }, [searchParams.returnDate]);
+
+  useEffect(() => {
+    setLoadingAirports(true);
+    axios
+      .get('http://localhost:5000/api/airports')
+      .then(response => {
+        setAirports(response.data);
+        setLoadingAirports(false);
+      })
+      .catch(err => {
+        console.error('Error fetching airports:', err);
+        setError('Failed to load airports');
+        setLoadingAirports(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (loadingAirports) return;
+
+    if (!searchParams.from || !searchParams.to || !searchParams.departureDate) {
+      setError('Missing search parameters');
+      return;
+    }
+
+    const originId = airports.find(a => a.code === searchParams.from)?.id;
+    const destId = airports.find(a => a.code === searchParams.to)?.id;
+
+    if (!originId || !destId) {
+      setError('Invalid airport codes');
+      return;
+    }
+
+    setLoadingFlights(true);
+    setError(null);
+
+    axios
+      .get('http://localhost:5000/api/flights', {
+        params: {
+          origin_airport_id: originId,
+          destination_airport_id: destId,
+          departure_date: searchParams.departureDate,
+        },
+      })
+      .then(response => {
+        console.log('Departure flights response:', response.data);
+        const fetchedFlights = response.data.map(flight => ({
+          id: flight.id.toString(),
+          from: airports.find(a => a.id === flight.origin_airport_id)?.code || flight.origin_airport_id.toString(),
+          to: airports.find(a => a.id === flight.destination_airport_id)?.code || flight.destination_airport_id.toString(),
+          departureTime: flight.departure_time,
+          arrivalTime: flight.arrival_time,
+          duration: calculateDuration(flight.departure_time, flight.arrival_time),
+          price: parseFloat(flight.price),
+          airline: 'SkySail Airlines',
+          flightNumber: flight.flight_number,
+        }));
+        setFlights(fetchedFlights);
+        if (fetchedFlights.length === 0) {
+          setError('No flights found for the selected route and date');
+        }
+        setLoadingFlights(false);
+      })
+      .catch(err => {
+        console.error('Error fetching departure flights:', err);
+        setError('Failed to fetch departure flights');
+        setLoadingFlights(false);
+      });
+
+    if (isRoundTrip && searchParams.returnDate) {
+      axios
+        .get('http://localhost:5000/api/flights', {
+          params: {
+            origin_airport_id: destId,
+            destination_airport_id: originId,
+            departure_date: searchParams.returnDate,
+          },
+        })
+        .then(response => {
+          console.log('Return flights response:', response.data);
+          const fetchedReturnFlights = response.data.map(flight => ({
+            id: flight.id.toString(),
+            from: airports.find(a => a.id === flight.origin_airport_id)?.code || flight.origin_airport_id.toString(),
+            to: airports.find(a => a.id === flight.destination_airport_id)?.code || flight.destination_airport_id.toString(),
+            departureTime: flight.departure_time,
+            arrivalTime: flight.arrival_time,
+            duration: calculateDuration(flight.departure_time, flight.arrival_time),
+            price: parseFloat(flight.price),
+            airline: 'SkySail Airlines',
+            flightNumber: flight.flight_number,
+          }));
+          setReturnFlights(fetchedReturnFlights);
+          if (fetchedReturnFlights.length === 0 && !error) {
+            setError('No return flights found for the selected route and date');
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching return flights:', err);
+          setError('Failed to fetch return flights');
+        });
+    }
+  }, [searchParams.from, searchParams.to, searchParams.departureDate, searchParams.returnDate, isRoundTrip, loadingAirports, airports]);
+
+  useEffect(() => {
+    let filteredDeparture = [...flights];
+    let filteredReturn = [...returnFlights];
 
     if (filterAirline !== 'all') {
       filteredDeparture = filteredDeparture.filter(flight => flight.airline === filterAirline);
@@ -188,15 +313,30 @@ const SearchResults = () => {
 
     setFlights(filteredDeparture);
     setReturnFlights(filteredReturn);
-  }, [filterAirline, sortBy]);
+  }, [filterAirline, sortBy, flights, returnFlights]);
+
+  const calculateDuration = (departureTime, arrivalTime) => {
+    const [depHours, depMinutes] = departureTime.split(':').map(Number);
+    const [arrHours, arrMinutes] = arrivalTime.split(':').map(Number);
+    const dep = new Date();
+    const arr = new Date();
+    dep.setHours(depHours, depMinutes);
+    arr.setHours(arrHours, arrMinutes);
+    if (arr < dep) arr.setDate(arr.getDate() + 1);
+    const diffMs = arr - dep;
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
 
   const handleSelectDepartureFlight = (flight) => {
+    console.log('Selected flight ID:', flight.id);
     setSelectedDepartureFlight(flight.id);
-    
-    // For one-way trips, navigate immediately
-    if (!isRoundTrip) {
+    if (isRoundTrip) {
+      setShowReturnFlights(true);
+    } else {
       navigate(`/select-flight/${flight.id}`, { 
-        state: { passengers: passengerCount } 
+        state: { passengers: passengerCount, flight } 
       });
     }
   };
@@ -207,19 +347,17 @@ const SearchResults = () => {
 
   const handleContinue = () => {
     if (isRoundTrip && selectedDepartureFlight && selectedReturnFlight) {
-      // Both flights are selected for round trip
       navigate(`/select-flight/${selectedDepartureFlight}/${selectedReturnFlight}`, { 
         state: { passengers: passengerCount } 
       });
     } else if (!isRoundTrip && selectedDepartureFlight) {
-      // One way trip with departure flight selected
       navigate(`/select-flight/${selectedDepartureFlight}`, { 
         state: { passengers: passengerCount } 
       });
     }
   };
 
-  const airlines = ['all', ...Array.from(new Set([...initialFlights.map(f => f.airline), ...initialReturnFlights.map(f => f.airline)]))];
+  const airlines = ['all', ...Array.from(new Set([...flights.map(f => f.airline), ...returnFlights.map(f => f.airline)]))];
   const sortOptions = [
     { value: 'price', label: 'Price' },
     { value: 'departure', label: 'Departure Time' },
@@ -228,26 +366,31 @@ const SearchResults = () => {
   const canContinue = !isRoundTrip ? selectedDepartureFlight : 
                      (selectedDepartureFlight && selectedReturnFlight);
 
+  console.log('Search Params:', searchParams);
+  console.log('Flights:', flights);
+  console.log('Return Flights:', returnFlights);
+  console.log('Airports:', airports);
+
   return (
     <Container>
-      <StepFlow currentStep={2} /> {/* Add StepFlow here */}
+      <StepFlow currentStep={2} />
       <Header>
         <div>
           <Title>Available Flights</Title>
           <SearchSummary>
             <Plane size={20} />
             {searchParams.from} → {searchParams.to}
-            <span>•</span>
+            <span> • </span>
             {searchParams.departureDate}
             {isRoundTrip && (
               <>
-                <span>•</span>
+                <span> • </span>
                 {searchParams.returnDate}
               </>
             )}
-            <span>•</span>
+            <span> • </span>
             {passengerCount} Passenger(s)
-            <span>•</span>
+            <span> • </span>
             {searchParams.class}
           </SearchSummary>
         </div>
@@ -261,77 +404,99 @@ const SearchResults = () => {
         </FilterSort>
       </Header>
 
-      <FlightListsContainer>
-        <FlightListSection>
-          <FlightListTitle>{isRoundTrip ? 'Departure Flights' : 'Select Your Flight'}</FlightListTitle>
-          <FlightList>
-            {flights.map(flight => (
-              <FlightCard key={flight.id}>
-                <FlightInfo>
-                  <Route>
-                    <span>{flight.from}</span>
-                    <Plane size={20} />
-                    <span>{flight.to}</span>
-                  </Route>
-                  <Time>
-                    <Clock size={18} />
-                    {flight.departureTime} - {flight.arrivalTime} ({flight.duration})
-                  </Time>
-                  <div>{flight.airline}</div>
-                </FlightInfo>
-                <Price>
-                  <Amount>${flight.price}</Amount>
-                  <SelectButton
-                    onClick={() => handleSelectDepartureFlight(flight)}
-                  >
-                    {selectedDepartureFlight === flight.id ? 'Selected' : 'Select'}
-                  </SelectButton>
-                </Price>
-              </FlightCard>
-            ))}
-          </FlightList>
-        </FlightListSection>
+      {loadingAirports ? (
+        <LoadingMessage>Loading airports...</LoadingMessage>
+      ) : error ? (
+        <ErrorMessage>{error}</ErrorMessage>
+      ) : loadingFlights ? (
+        <LoadingMessage>Loading flights...</LoadingMessage>
+      ) : (
+        <>
+          <DebugInfo>
+            {JSON.stringify({ searchParams, flightsLength: flights.length, returnFlightsLength: returnFlights.length }, null, 2)}
+          </DebugInfo>
 
-        {isRoundTrip && (
-          <FlightListSection>
-            <FlightListTitle>Return Flights</FlightListTitle>
-            <FlightList>
-              {returnFlights.map(flight => (
-                <FlightCard key={flight.id}>
-                  <FlightInfo>
-                    <Route>
-                      <span>{flight.from}</span>
-                      <Plane size={20} />
-                      <span>{flight.to}</span>
-                    </Route>
-                    <Time>
-                      <Clock size={18} />
-                      {flight.departureTime} - {flight.arrivalTime} ({flight.duration})
-                    </Time>
-                    <div>{flight.airline}</div>
-                  </FlightInfo>
-                  <Price>
-                    <Amount>${flight.price}</Amount>
-                    <SelectButton
-                      onClick={() => handleSelectReturnFlight(flight)}
-                    >
-                      {selectedReturnFlight === flight.id ? 'Selected' : 'Select'}
-                    </SelectButton>
-                  </Price>
-                </FlightCard>
-              ))}
-            </FlightList>
-          </FlightListSection>
-        )}
-      </FlightListsContainer>
+          <FlightListsContainer>
+            <FlightListSection>
+              <FlightListTitle>{isRoundTrip ? 'Departure Flights' : 'Select Your Flight'}</FlightListTitle>
+              {flights.length === 0 ? (
+                <LoadingMessage>No flights available</LoadingMessage>
+              ) : (
+                <FlightList>
+                  {flights.map(flight => (
+                    <FlightCard key={flight.id}>
+                      <FlightInfo>
+                        <Route>
+                          <span>{flight.from}</span>
+                          <Plane size={20} />
+                          <span>{flight.to}</span>
+                        </Route>
+                        <Time>
+                          <Clock size={18} />
+                          {flight.departureTime} - {flight.arrivalTime} ({flight.duration})
+                        </Time>
+                        <div>{flight.airline}</div>
+                      </FlightInfo>
+                      <Price>
+                        <Amount>₹{flight.price}</Amount>
+                        <SelectButton
+                          onClick={() => handleSelectDepartureFlight(flight)}
+                        >
+                          {selectedDepartureFlight === flight.id ? 'Selected' : 'Select'}
+                        </SelectButton>
+                      </Price>
+                    </FlightCard>
+                  ))}
+                </FlightList>
+              )}
+            </FlightListSection>
 
-      {isRoundTrip && (
-        <BookNowButton 
-          onClick={handleContinue}
-          disabled={!canContinue}
-        >
-          {canContinue ? 'Continue to Booking' : 'Select Both Flights to Continue'}
-        </BookNowButton>
+            {showReturnFlights && isRoundTrip && (
+              <FlightListSection>
+                <FlightListTitle>Return Flights</FlightListTitle>
+                {returnFlights.length === 0 ? (
+                  <LoadingMessage>No return flights available</LoadingMessage>
+                ) : (
+                  <FlightList>
+                    {returnFlights.map(flight => (
+                      <FlightCard key={flight.id}>
+                        <FlightInfo>
+                          <Route>
+                            <span>{flight.from}</span>
+                            <Plane size={20} />
+                            <span>{flight.to}</span>
+                          </Route>
+                          <Time>
+                            <Clock size={18} />
+                            {flight.departureTime} - {flight.arrivalTime} ({flight.duration})
+                          </Time>
+                          <div>{flight.airline}</div>
+                        </FlightInfo>
+                        <Price>
+                          <Amount>₹{flight.price}</Amount>
+                          <SelectButton
+                            onClick={() => handleSelectReturnFlight(flight)}
+                          >
+                            {selectedReturnFlight === flight.id ? 'Selected' : 'Select'}
+                          </SelectButton>
+                        </Price>
+                      </FlightCard>
+                    ))}
+                  </FlightList>
+                )}
+              </FlightListSection>
+            )}
+          </FlightListsContainer>
+
+          {showReturnFlights && isRoundTrip && (
+            <BookNowButton 
+              onClick={handleContinue}
+              disabled={!canContinue}
+            >
+              {canContinue ? 'Continue to Booking' : 'Select Both Flights to Continue'}
+            </BookNowButton>
+          )}
+        </>
       )}
     </Container>
   );

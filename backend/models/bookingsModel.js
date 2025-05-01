@@ -1,3 +1,4 @@
+// bookingsModel.js
 module.exports = (pool) => {
   return {
     getAllBookings: async () => {
@@ -11,19 +12,19 @@ module.exports = (pool) => {
     },
 
     addBooking: async (data) => {
-      const { booking_id, flight_id, passenger_id, seat_id, booking_status, total_price } = data;
+      const { booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price } = data;
       const result = await pool.query(
-        'INSERT INTO bookings (booking_id, flight_id, passenger_id, seat_id, booking_status, total_price) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [booking_id, flight_id, passenger_id, seat_id, booking_status || 'Confirmed', total_price]
+        'INSERT INTO bookings (booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [booking_id, flight_id, return_flight_id, seat_id, booking_status || 'Confirmed', total_price]
       );
       return result.rows[0];
     },
 
     updateBooking: async (id, data) => {
-      const { booking_id, flight_id, passenger_id, seat_id, booking_status, total_price } = data;
+      const { booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price } = data;
       const result = await pool.query(
-        'UPDATE bookings SET booking_id = $1, flight_id = $2, passenger_id = $3, seat_id = $4, booking_status = $5, total_price = $6 WHERE id = $7 RETURNING *',
-        [booking_id, flight_id, passenger_id, seat_id, booking_status || 'Confirmed', total_price, id]
+        'UPDATE bookings SET booking_id = $1, flight_id = $2, return_flight_id = $3, seat_id = $4, booking_status = $5, total_price = $6 WHERE id = $7 RETURNING *',
+        [booking_id, flight_id, return_flight_id, seat_id, booking_status || 'Confirmed', total_price, id]
       );
       return result.rows[0] || null;
     },
