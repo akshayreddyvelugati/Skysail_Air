@@ -13,7 +13,7 @@ module.exports = (pool) => {
 
     addBooking: async (data) => {
       const { booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price } = data;
-      const result = await pool.query(
+      const result = await pool.query( 
         'INSERT INTO bookings (booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [booking_id, flight_id, return_flight_id, seat_id, booking_status || 'Confirmed', total_price]
       );

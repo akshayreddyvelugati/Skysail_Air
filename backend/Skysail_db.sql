@@ -126,7 +126,6 @@ CREATE TABLE passenger_bookings (
 );
 
 ---------------------------------------------------------------------
---Insert Data
 
 -- Insert Domestic Airports (8)
 INSERT INTO airports (code, name, city, country, terminals) VALUES
