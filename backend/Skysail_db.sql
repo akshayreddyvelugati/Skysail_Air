@@ -19,19 +19,6 @@ CREATE TABLE airplanes (
     manufacture_year INTEGER
 );
 
---FLIGHTS 
-CREATE TABLE flights (
-    id SERIAL PRIMARY KEY,
-    flight_number VARCHAR(20) UNIQUE NOT NULL,
-    origin_airport_id INTEGER REFERENCES airports(id) ON DELETE CASCADE,
-    destination_airport_id INTEGER REFERENCES airports(id) ON DELETE CASCADE,
-    aircraft_id INTEGER REFERENCES airplanes(id) ON DELETE CASCADE,
-    departure_date DATE NOT NULL,
-    departure_time TIME NOT NULL,
-    arrival_time TIME NOT NULL,
-    status VARCHAR(20) DEFAULT 'Scheduled' CHECK (status IN ('Scheduled', 'Boarding', 'Departed', 'Arrived', 'Cancelled')),
-    price DECIMAL(10, 2) NOT NULL
-);
 
 --CREW MEMBERS 
 CREATE TABLE crew_members (
