@@ -9,6 +9,7 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+  padding-bottom: 100px; /* Ensure space for footer */
 `;
 
 const FlightSummary = styled.div`
@@ -159,13 +160,21 @@ const LoadingMessage = styled.div`
   color: #6b7280;
 `;
 
+const ErrorContainer = styled.div`
+  text-align: center;
+  padding: 1rem;
+  color: #ef4444;
+`;
+
 const SelectFlight = () => {
-  const { id } = useParams(); // Get flight ID from URL
+  const { id, returnId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { passengers: passengerCount = 1 } = location.state || {};
+  const { passengers: passengerCount = 1, tripType = 'one-way' } = location.state || {};
   const [departureFlight, setDepartureFlight] = useState(null);
+  const [returnFlight, setReturnFlight] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [passengerData, setPassengerData] = useState(
     Array.from({ length: passengerCount }, () => ({
       firstName: '',
@@ -183,10 +192,11 @@ const SelectFlight = () => {
   );
 
   useEffect(() => {
-    const fetchFlight = async () => {
+    const fetchFlights = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/flights/${id}`);
-        const flight = response.data;
+        // Fetch departure flight
+        const departureResponse = await axios.get(`http://localhost:5000/api/flights/${id}`);
+        const flight = departureResponse.data;
         const airportsResponse = await axios.get('http://localhost:5000/api/airports');
         const airports = airportsResponse.data;
         setDepartureFlight({
@@ -201,13 +211,32 @@ const SelectFlight = () => {
           departureDate: flight.departure_date,
           flightNumber: flight.flight_number,
         });
+
+        // Fetch return flight if round-trip
+        if (tripType === 'round-trip' && returnId) {
+          const returnResponse = await axios.get(`http://localhost:5000/api/flights/${returnId}`);
+          const returnFlightData = returnResponse.data;
+          setReturnFlight({
+            id: returnFlightData.id.toString(),
+            from: airports.find(a => a.id === returnFlightData.origin_airport_id)?.code || 'Unknown',
+            to: airports.find(a => a.id === returnFlightData.destination_airport_id)?.code || 'Unknown',
+            departureTime: returnFlightData.departure_time,
+            arrivalTime: returnFlightData.arrival_time,
+            duration: calculateDuration(returnFlightData.departure_time, returnFlightData.arrival_time),
+            price: parseFloat(returnFlightData.price),
+            airline: 'SkySail Airlines',
+            departureDate: returnFlightData.departure_date,
+            flightNumber: returnFlightData.flight_number,
+          });
+        }
+        setLoading(false);
       } catch (err) {
-        console.error('Error fetching flight:', err);
-        setError('Departure flight not found for ID: ' + id);
+        setError('Failed to load flight details');
+        setLoading(false);
       }
     };
-    fetchFlight();
-  }, [id]);
+    fetchFlights();
+  }, [id, returnId, tripType]);
 
   const calculateDuration = (departure, arrival) => {
     const [depHours, depMinutes] = departure.split(':').map(Number);
@@ -278,7 +307,7 @@ const SelectFlight = () => {
     }
 
     try {
-      // Step 1: Save each passenger to the database
+      // Save passengers
       const passengerPromises = passengerData.map(async (passenger) => {
         const response = await axios.post('http://localhost:5000/api/passengers', {
           first_name: passenger.firstName,
@@ -296,19 +325,20 @@ const SelectFlight = () => {
 
       const savedPassengers = await Promise.all(passengerPromises);
 
-      // Step 2: Create a booking with a generated booking_id
+      // Create booking
       const bookingId = `SKS-${Date.now()}-${Math.floor(Math.random() * 1000)}`.slice(0, 30);
+      const totalPrice = departureFlight.price * passengerCount + (returnFlight ? returnFlight.price * passengerCount : 0);
       const bookingResponse = await axios.post('http://localhost:5000/api/bookings', {
         booking_id: bookingId,
         flight_id: parseInt(departureFlight.id),
-        return_flight_id: null,
-        total_price: departureFlight.price * passengerCount,
+        return_flight_id: returnFlight ? parseInt(returnFlight.id) : null,
+        total_price: totalPrice,
         status: 'Confirmed',
       });
 
       const booking = bookingResponse.data;
 
-      // Step 3: Link passengers to the booking
+      // Link passengers to booking
       const passengerBookingPromises = savedPassengers.map(async (passenger) => {
         await axios.post('http://localhost:5000/api/passenger-bookings', {
           passenger_id: passenger.id,
@@ -318,27 +348,39 @@ const SelectFlight = () => {
 
       await Promise.all(passengerBookingPromises);
 
-      // Step 4: Prepare booking data for the next step
+      // Prepare data for seat selection
       const bookingData = {
         departureFlight,
-        returnFlight: null,
+        returnFlight,
         passengers: savedPassengers,
         bookingId: booking.id,
-        totalPrice: departureFlight.price * passengerCount,
+        totalPrice,
+        passengerCount,
+        tripType
       };
+      sessionStorage.setItem('passengerData', JSON.stringify(savedPassengers));
       navigate('/seat-selection', { state: bookingData });
     } catch (err) {
-      console.error('Error saving passengers and booking:', err.response?.data || err.message);
-      alert('Failed to save passenger details and create booking. Please try again.');
+      setError('Failed to save passenger details and create booking');
     }
   };
 
-  if (error) {
-    return <ErrorMessage>{error}</ErrorMessage>;
+  if (loading) {
+    return (
+      <Container>
+        <StepFlow currentStep={3} />
+        <LoadingMessage>Loading flight details...</LoadingMessage>
+      </Container>
+    );
   }
 
-  if (!departureFlight) {
-    return <LoadingMessage>Loading flight details...</LoadingMessage>;
+  if (error) {
+    return (
+      <Container>
+        <StepFlow currentStep={3} />
+        <ErrorContainer>{error}</ErrorContainer>
+      </Container>
+    );
   }
 
   return (
@@ -347,7 +389,7 @@ const SelectFlight = () => {
       <FlightSummary>
         <FlightDetails>
           <DetailItem><strong>Passenger Count:</strong> {passengerCount}</DetailItem>
-          <DetailItem><strong>Trip Type:</strong> One-way</DetailItem>
+          <DetailItem><strong>Trip Type:</strong> {tripType === 'round-trip' ? 'Round-trip' : 'One-way'}</DetailItem>
           <DetailItem><strong>Flight ID:</strong> {departureFlight.flightNumber}</DetailItem>
         </FlightDetails>
         <FlightInfo>
@@ -370,8 +412,32 @@ const SelectFlight = () => {
             <span>₹{departureFlight.price}</span>
           </Price>
         </FlightDetails>
+        {returnFlight && (
+          <>
+            <FlightInfo>
+              <Route>
+                <Plane size={20} />
+                {returnFlight.from} → {returnFlight.to}
+              </Route>
+              <Time>
+                <Clock size={18} />
+                {returnFlight.departureTime} - {returnFlight.arrivalTime} ({returnFlight.duration})
+              </Time>
+              <div>{returnFlight.airline}</div>
+            </FlightInfo>
+            <FlightDetails>
+              <Time>
+                <Calendar size={18} />
+                {returnFlight.departureDate}
+              </Time>
+              <Price>
+                <span>₹{returnFlight.price}</span>
+              </Price>
+            </FlightDetails>
+          </>
+        )}
         <TotalPrice>
-          <strong>TOTAL:</strong> ₹{departureFlight.price * passengerCount} for {passengerCount} Passenger(s)
+          <strong>TOTAL:</strong> ₹{(departureFlight.price * passengerCount + (returnFlight ? returnFlight.price * passengerCount : 0))} for {passengerCount} Passenger(s)
         </TotalPrice>
       </FlightSummary>
 

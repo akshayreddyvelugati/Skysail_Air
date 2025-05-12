@@ -286,7 +286,7 @@ const Home = () => {
     <div>
       <HeroSection>
         <HeroContent>
-          <Title>Luxury Woven into Every Mile</Title>
+          <Title>Your gateway to hassle free Travel </Title>
           <Subtitle>
             Canvas of Clouds, Crafted in Comfort.<br></br>
             Experience seamless travel with SkySail! 

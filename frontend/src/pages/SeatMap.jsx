@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import StepFlow from './StepFlow'; // Import the StepFlow component
+import StepFlow from './StepFlow';
+import axios from 'axios';
 
 const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
   background: linear-gradient(180deg, ${props => props.theme.colors?.white || '#ffffff'} 0%, ${props => props.theme.colors?.gray?.[100] || '#f5f5f5'} 100%);
+  padding-bottom: 100px; /* Ensure space for footer */
 `;
 
 const Header = styled.div`
@@ -118,7 +120,6 @@ const Seat = styled.button`
   background: ${props => {
     if (props.status === 'selected') return props.theme.colors?.secondary || '#7c3aed';
     if (props.status === 'occupied') return props.theme.colors?.gray?.[300] || '#d1d5db';
-    // Apply seat type colors to available seats
     switch (props.seatType) {
       case 'Window':
         return props.theme.colors?.blue?.[200] || '#93c5fd';
@@ -202,33 +203,12 @@ const ErrorMessage = styled.div`
   font-family: ${props => props.theme.fonts?.body || 'sans-serif'};
 `;
 
-const DebugInfo = styled.div`
-  background: ${props => props.theme.colors?.gray?.[50] || '#f9fafb'};
+const LoadingMessage = styled.div`
+  text-align: center;
   padding: 1rem;
-  margin-bottom: 2rem;
-  border-radius: 0.5rem;
-  font-family: ${props => props.theme.fonts?.body || 'sans-serif'};
-  font-size: 1rem;
-  color: ${props => props.theme.colors?.gray?.[700] || '#4b5563'};
-  border: 1px solid ${props => props.theme.colors?.gray?.[200] || '#e5e7eb'};
+  color: ${props => props.theme.colors.gray?.[500] || '#6b7280'};
 `;
 
-// Flight data
-const initialFlights = [
-  { id: 'SK001', from: 'JFK', to: 'LAX', departureTime: '08:00', arrivalTime: '11:30', duration: '3h 30m', price: 299, airline: 'SkySail Airlines', date: '2024-03-25' },
-  { id: 'AA101', from: 'JFK', to: 'LAX', departureTime: '09:00', arrivalTime: '12:45', duration: '3h 45m', price: 329, airline: 'American Airlines', date: '2024-03-25' },
-  { id: 'UA201', from: 'JFK', to: 'LAX', departureTime: '13:00', arrivalTime: '16:30', duration: '3h 30m', price: 359, airline: 'United Airlines', date: '2024-03-25' },
-];
-
-const initialReturnFlights = [
-  { id: 'SK004', from: 'LAX', to: 'JFK', departureTime: '14:00', arrivalTime: '21:00', duration: '4h 0m', price: 349, airline: 'SkySail Airlines', date: '2024-03-27' },
-  { id: 'AA104', from: 'LAX', to: 'JFK', departureTime: '15:00', arrivalTime: '22:30', duration: '4h 30m', price: 379, airline: 'American Airlines', date: '2024-03-27' },
-  { id: 'UA204', from: 'LAX', to: 'JFK', departureTime: '18:00', arrivalTime: '01:00', duration: '4h 0m', price: 399, airline: 'United Airlines', date: '2024-03-27' },
-];
-
-const flightsData = [...initialFlights, ...initialReturnFlights];
-
-// Generate seat layout with seat types
 const generateSeats = () => {
   const rows = 10;
   const seatsPerHalf = 3;
@@ -256,7 +236,6 @@ const generateSeats = () => {
   return layout;
 };
 
-// Error Boundary Component
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
@@ -268,7 +247,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <Container>
-          <StepFlow currentStep={4} /> {/* Add StepFlow here */}
+          <StepFlow currentStep={4} />
           <ErrorMessage>
             Something went wrong: {this.state.error?.message || 'Unknown error'}
           </ErrorMessage>
@@ -280,82 +259,31 @@ class ErrorBoundary extends React.Component {
 }
 
 const SeatMap = () => {
-  const { flightId, departureId, returnId } = useParams();
-  const { state } = useLocation();
   const navigate = useNavigate();
-  
-  // Get passenger count and trip type
-  const passengerCount = state?.passengers ? parseInt(state.passengers) : 1;
-  const isRoundTrip = state?.isRoundTrip || !!returnId;
+  const { state } = useLocation();
+  const { departureFlight, returnFlight, passengerCount, bookingId, tripType } = state || {};
+  const isRoundTrip = tripType === 'round-trip' && returnFlight;
 
-  // Determine flight IDs
-  const departureFlightId = departureId || flightId;
-  const departureFlight = flightsData.find(flight => flight.id === departureFlightId);
-  const returnFlight = returnId ? flightsData.find(flight => flight.id === returnId) : null;
-
-  // Debug logs
-  console.log('SeatMap params:', { flightId, departureId, returnId });
-  console.log('SeatMap state:', { passengerCount, isRoundTrip });
-  console.log('Found flights:', { departureFlight, returnFlight });
-
-  // Error handling
-  if (!departureFlightId) {
-    console.error('No departure flight ID provided');
-    return (
-      <Container>
-        <StepFlow currentStep={4} /> {/* Add StepFlow here */}
-        <ErrorMessage>No departure flight ID provided</ErrorMessage>
-      </Container>
-    );
-  }
-  if (!departureFlight) {
-    console.error(`Departure flight not found for ID: ${departureFlightId}`);
-    return (
-      <Container>
-        <StepFlow currentStep={4} /> {/* Add StepFlow here */}
-        <ErrorMessage>Departure flight not found for ID: {departureFlightId}</ErrorMessage>
-      </Container>
-    );
-  }
-  if (isRoundTrip && !returnId) {
-    console.error('No return flight ID provided for round-trip');
-    return (
-      <Container>
-        <StepFlow currentStep={4} /> {/* Add StepFlow here */}
-        <ErrorMessage>No return flight ID provided for round-trip</ErrorMessage>
-      </Container>
-    );
-  }
-  if (isRoundTrip && !returnFlight) {
-    console.error(`Return flight not found for ID: ${returnId}`);
-    return (
-      <Container>
-        <StepFlow currentStep={4} /> {/* Add StepFlow here */}
-        <ErrorMessage>Return flight not found for ID: {returnId}</ErrorMessage>
-      </Container>
-    );
-  }
-
-  // Initialize seat layouts and selected seats
   const [departureSeatLayout, setDepartureSeatLayout] = useState(generateSeats());
   const [returnSeatLayout, setReturnSeatLayout] = useState(isRoundTrip ? generateSeats() : null);
   const [selectedDepartureSeats, setSelectedDepartureSeats] = useState([]);
   const [selectedReturnSeats, setSelectedReturnSeats] = useState(isRoundTrip ? [] : []);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Ensure returnSeatLayout and selectedReturnSeats are initialized
   useEffect(() => {
-    console.log('useEffect: Checking return seat layout and seats');
+    if (!departureFlight || (isRoundTrip && !returnFlight)) {
+      setError('Missing flight details');
+      return;
+    }
     if (isRoundTrip && !returnSeatLayout) {
-      console.log('Initializing returnSeatLayout');
       setReturnSeatLayout(generateSeats());
     }
     if (isRoundTrip && selectedReturnSeats === null) {
-      console.log('Initializing selectedReturnSeats');
       setSelectedReturnSeats([]);
     }
-  }, [isRoundTrip, returnSeatLayout, selectedReturnSeats]);
+  }, [departureFlight, returnFlight, isRoundTrip]);
 
-  // Handle seat selection
   const handleSeatSelect = (flightType, rowIndex, seatIndex) => {
     const layout = flightType === 'departure' ? [...departureSeatLayout] : [...returnSeatLayout];
     const setLayout = flightType === 'departure' ? setDepartureSeatLayout : setReturnSeatLayout;
@@ -363,85 +291,87 @@ const SeatMap = () => {
     const setSelectedSeats = flightType === 'departure' ? setSelectedDepartureSeats : setSelectedReturnSeats;
 
     const seat = layout[rowIndex][seatIndex];
-    console.log(`Selecting seat for ${flightType}:`, { seatId: seat.id, status: seat.status, seatType: seat.seatType, selectedSeats });
-
-    if (seat.status === 'occupied') {
-      console.log(`Cannot select occupied seat: ${seat.id}`);
-      return;
-    }
+    if (seat.status === 'occupied') return;
 
     if (seat.status === 'selected') {
       layout[rowIndex][seatIndex] = { ...seat, status: 'available' };
       const index = selectedSeats.indexOf(seat.id);
-      if (index !== -1) {
-        selectedSeats.splice(index, 1);
-        console.log(`Deselected seat: ${seat.id}`);
-      }
+      if (index !== -1) selectedSeats.splice(index, 1);
     } else if (seat.status === 'available' && selectedSeats.length < passengerCount) {
       layout[rowIndex][seatIndex] = { ...seat, status: 'selected' };
       selectedSeats.push(seat.id);
-      console.log(`Selected seat: ${seat.id}`);
-    } else {
-      console.log(`Cannot select more seats: ${selectedSeats.length}/${passengerCount}`);
     }
 
     setLayout(layout);
     setSelectedSeats(selectedSeats);
-    console.log(`Updated ${flightType} seats:`, selectedSeats);
   };
 
-  // Handle confirmation
-  const handleConfirm = () => {
-    console.log('Attempting to confirm:', {
-      departureSeats: selectedDepartureSeats,
-      returnSeats: isRoundTrip ? selectedReturnSeats : [],
-      passengerCount,
-      isRoundTrip
-    });
-
+  const handleConfirm = async () => {
     if (
       selectedDepartureSeats.length === passengerCount &&
       (!isRoundTrip || selectedReturnSeats.length === passengerCount)
     ) {
-      const bookingId = Math.random().toString(36).substring(2, 15);
-      const bookingDetails = {
-        departureFlightId,
-        departureSeats: selectedDepartureSeats,
-        ...(isRoundTrip && {
-          returnFlightId: returnId,
-          returnSeats: selectedReturnSeats
-        }),
-        passengerCount
-      };
-      console.log('Confirming booking:', bookingDetails);
-      sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
-      navigate(`/confirmation/${bookingId}`, {
-        state: bookingDetails
-      });
-    } else {
-      console.error('Cannot confirm: Incomplete seat selection', {
-        departureSeats: selectedDepartureSeats.length,
-        returnSeats: isRoundTrip ? selectedReturnSeats.length : 'N/A',
-        passengerCount
-      });
+      try {
+        setLoading(true);
+        // Save seat assignments to the database
+        const seatAssignments = [];
+        const passengersResponse = await axios.get(`http://localhost:5000/api/passenger-bookings?booking_id=${bookingId}`);
+        const passengerBookings = passengersResponse.data;
+
+        passengerBookings.forEach((pb, index) => {
+          seatAssignments.push({
+            passenger_id: pb.passenger_id,
+            booking_id: bookingId,
+            flight_id: parseInt(departureFlight.id),
+            seat_number: selectedDepartureSeats[index],
+          });
+          if (isRoundTrip && returnFlight) {
+            seatAssignments.push({
+              passenger_id: pb.passenger_id,
+              booking_id: bookingId,
+              flight_id: parseInt(returnFlight.id),
+              seat_number: selectedReturnSeats[index],
+            });
+          }
+        });
+
+        await Promise.all(seatAssignments.map(assignment =>
+          axios.post('http://localhost:5000/api/seat-assignments', assignment)
+        ));
+
+        const bookingDetails = {
+          departureFlightId: departureFlight.id,
+          departureSeats: selectedDepartureSeats,
+          returnFlightId: isRoundTrip ? returnFlight.id : null,
+          returnSeats: isRoundTrip ? selectedReturnSeats : [],
+          passengerCount,
+          tripType
+        };
+        sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
+        navigate(`/confirmation/${bookingId}`, { state: bookingDetails });
+      } catch (err) {
+        setError('Failed to save seat assignments');
+        setLoading(false);
+      }
     }
   };
 
-  // Check if confirmation is possible
   const canConfirm = selectedDepartureSeats.length === passengerCount &&
     (!isRoundTrip || selectedReturnSeats.length === passengerCount);
 
-  console.log('Can confirm:', {
-    canConfirm,
-    departureSeats: selectedDepartureSeats.length,
-    returnSeats: isRoundTrip ? selectedReturnSeats.length : 'N/A',
-    passengerCount
-  });
+  if (error) {
+    return (
+      <Container>
+        <StepFlow currentStep={4} />
+        <ErrorMessage>{error}</ErrorMessage>
+      </Container>
+    );
+  }
 
   return (
     <ErrorBoundary>
       <Container>
-        <StepFlow currentStep={4} /> {/* Add StepFlow here */}
+        <StepFlow currentStep={4} />
         <Header>
           <Heading>Selecting a Seat</Heading>
           <Subtitle>
@@ -449,19 +379,9 @@ const SeatMap = () => {
           </Subtitle>
         </Header>
 
-        <DebugInfo>
-          Passenger Count: {passengerCount}<br />
-          Trip Type: {isRoundTrip ? 'Round-trip' : 'One-way'}<br />
-          Departure Flight: {departureFlightId || 'None'}<br />
-          {isRoundTrip && `Return Flight: ${returnId || 'None'}`}<br />
-          Selected Departure Seats: {selectedDepartureSeats.join(', ') || 'None'}<br />
-          {isRoundTrip && `Selected Return Seats: ${selectedReturnSeats.join(', ') || 'None'}`}<br />
-          Can Confirm: {canConfirm ? 'Yes' : 'No'}<br />
-        </DebugInfo>
-
         <FlightSection>
           <FlightTitle>
-            Departure: {departureFlight?.from || 'Unknown'} → {departureFlight?.to || 'Unknown'} ({departureFlight?.date || 'Unknown'})
+            Departure: {departureFlight?.from} → {departureFlight?.to} ({departureFlight?.departureDate})
           </FlightTitle>
           <SeatMapContainer>
             <Legend>
@@ -507,7 +427,7 @@ const SeatMap = () => {
         {isRoundTrip && returnFlight && returnSeatLayout && (
           <FlightSection>
             <FlightTitle>
-              Return: {returnFlight?.from || 'Unknown'} → {returnFlight?.to || 'Unknown'} ({returnFlight?.date || 'Unknown'})
+              Return: {returnFlight?.from} → {returnFlight?.to} ({returnFlight?.departureDate})
             </FlightTitle>
             <SeatMapContainer>
               <Legend>
@@ -553,9 +473,9 @@ const SeatMap = () => {
 
         <Button
           onClick={handleConfirm}
-          disabled={!canConfirm}
+          disabled={!canConfirm || loading}
         >
-          Confirm Seat Selection
+          {loading ? 'Confirming...' : 'Confirm Seat Selection'}
         </Button>
       </Container>
     </ErrorBoundary>

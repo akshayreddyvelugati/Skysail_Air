@@ -17,6 +17,7 @@ const PageContainer = styled.div`
   justify-content: center;
   padding: 2rem;
   width: 100%;
+  padding-bottom: 100px; /* Ensure space for footer */
 `;
 
 const SearchCard = styled.div`
@@ -79,6 +80,7 @@ const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative; /* For positioning suggestions */
 `;
 
 const Label = styled.label`
@@ -103,18 +105,28 @@ const Input = styled.input`
   }
 `;
 
-const Select = styled.select`
-  padding: 0.75rem;
+const SuggestionsList = styled.ul`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: ${props => props.theme.colors.white || '#ffffff'};
   border: 1px solid ${props => props.theme.colors.gray?.[300] || '#d1d5db'};
   border-radius: 0.5rem;
-  font-size: 1rem;
-  width: 100%;
-  background-color: #f5f5f5;
-  height: 2.5rem;
-  &:focus {
-    outline: none;
-    border-color: #1A365D;
-    box-shadow: 0 0 0 2px rgba(26, 54, 93, 0.2);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+`;
+
+const SuggestionItem = styled.li`
+  padding: 0.75rem;
+  cursor: pointer;
+  &:hover {
+    background-color: ${props => props.theme.colors.gray?.[100] || '#f5f5f5'};
   }
 `;
 
@@ -195,6 +207,10 @@ const FlightSearchForm = () => {
     class: 'economy'
   });
   const [airports, setAirports] = useState([]);
+  const [filteredFromAirports, setFilteredFromAirports] = useState([]);
+  const [filteredToAirports, setFilteredToAirports] = useState([]);
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [showToSuggestions, setShowToSuggestions] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
   const [showReturnPicker, setShowReturnPicker] = useState(false);
   const [airportError, setAirportError] = useState('');
@@ -202,7 +218,6 @@ const FlightSearchForm = () => {
   const maxDate = addMonths(today, 3);
 
   useEffect(() => {
-    // Fetch airports from the backend
     axios.get('http://localhost:5000/api/airports')
       .then(response => {
         setAirports(response.data);
@@ -229,6 +244,8 @@ const FlightSearchForm = () => {
       to: prev.from
     }));
     setAirportError('');
+    setShowFromSuggestions(false);
+    setShowToSuggestions(false);
   };
 
   const handleSubmit = (e) => {
@@ -241,8 +258,8 @@ const FlightSearchForm = () => {
 
     const formattedData = {
       ...formData,
-      departureDate: formData.departureDate ? formData.departureDate.toLocaleDateString() : '',
-      returnDate: formData.returnDate ? formData.returnDate.toLocaleDateString() : '',
+      departureDate: formData.departureDate ? formData.departureDate.toLocaleDateString('en-US') : '',
+      returnDate: formData.returnDate ? formData.returnDate.toLocaleDateString('en-US') : '',
       tripType,
     };
     navigate('/search-results', { state: formattedData });
@@ -255,6 +272,37 @@ const FlightSearchForm = () => {
       [name]: value
     }));
     if (airportError && (name === 'from' || name === 'to')) {
+      setAirportError('');
+    }
+
+    if (name === 'from') {
+      const filtered = airports.filter(airport =>
+        airport.code.toLowerCase().startsWith(value.toLowerCase()) ||
+        airport.name.toLowerCase().startsWith(value.toLowerCase())
+      );
+      setFilteredFromAirports(filtered);
+      setShowFromSuggestions(value.length > 0);
+    } else if (name === 'to') {
+      const filtered = airports.filter(airport =>
+        airport.code.toLowerCase().startsWith(value.toLowerCase()) ||
+        airport.name.toLowerCase().startsWith(value.toLowerCase())
+      );
+      setFilteredToAirports(filtered);
+      setShowToSuggestions(value.length > 0);
+    }
+  };
+
+  const handleSelectAirport = (name, airport) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: airport.code
+    }));
+    if (name === 'from') {
+      setShowFromSuggestions(false);
+    } else {
+      setShowToSuggestions(false);
+    }
+    if (airportError) {
       setAirportError('');
     }
   };
@@ -299,38 +347,54 @@ const FlightSearchForm = () => {
           <AirportFieldsContainer>
             <FormGroup style={{ flex: 1 }}>
               <Label><Plane size={18} /> From</Label>
-              <Select
+              <Input
+                type="text"
                 name="from"
                 value={formData.from}
                 onChange={handleChange}
+                placeholder="Enter departure airport"
                 required
-              >
-                <option value="">Select departure airport</option>
-                {airports.map(airport => (
-                  <option key={airport.code} value={airport.code}>
-                    {airport.code} - {airport.name}
-                  </option>
-                ))}
-              </Select>
+                autoComplete="off"
+              />
+              {showFromSuggestions && filteredFromAirports.length > 0 && (
+                <SuggestionsList>
+                  {filteredFromAirports.map(airport => (
+                    <SuggestionItem
+                      key={airport.code}
+                      onClick={() => handleSelectAirport('from', airport)}
+                    >
+                      {airport.code} - {airport.name}
+                    </SuggestionItem>
+                  ))}
+                </SuggestionsList>
+              )}
             </FormGroup>
             <SwitchButton type="button" onClick={handleSwitchAirports}>
               <ArrowLeftRight size={18} />
             </SwitchButton>
             <FormGroup style={{ flex: 1 }}>
               <Label><Plane size={18} /> To</Label>
-              <Select
+              <Input
+                type="text"
                 name="to"
                 value={formData.to}
                 onChange={handleChange}
+                placeholder="Enter arrival airport"
                 required
-              >
-                <option value="">Select arrival airport</option>
-                {airports.map(airport => (
-                  <option key={airport.code} value={airport.code}>
-                    {airport.code} - {airport.name}
-                  </option>
-                ))}
-              </Select>
+                autoComplete="off"
+              />
+              {showToSuggestions && filteredToAirports.length > 0 && (
+                <SuggestionsList>
+                  {filteredToAirports.map(airport => (
+                    <SuggestionItem
+                      key={airport.code}
+                      onClick={() => handleSelectAirport('to', airport)}
+                    >
+                      {airport.code} - {airport.name}
+                    </SuggestionItem>
+                  ))}
+                </SuggestionsList>
+              )}
             </FormGroup>
           </AirportFieldsContainer>
           {airportError && <p style={{ color: 'red', gridColumn: '1 / -1', marginBottom: '0' }}>{airportError}</p>}
@@ -339,7 +403,7 @@ const FlightSearchForm = () => {
             <DatePickerContainer>
               <DateInput
                 type="text"
-                value={formData.departureDate ? formData.departureDate.toLocaleDateString() : 'dd/mm/yyyy'}
+                value={formData.departureDate ? formData.departureDate.toLocaleDateString() : 'mm/dd/yyyy'}
                 onClick={() => setShowDeparturePicker(!showDeparturePicker)}
                 readOnly
               />
@@ -350,7 +414,7 @@ const FlightSearchForm = () => {
                     onChange={handleDepartureDateChange}
                     minDate={today}
                     maxDate={maxDate}
-                    dateFormat="dd/MM/yyyy"
+                    dateFormat="MM/dd/yyyy"
                     inline
                   />
                 </CalendarOverlay>
@@ -363,7 +427,7 @@ const FlightSearchForm = () => {
               <DatePickerContainer>
                 <DateInput
                   type="text"
-                  value={formData.returnDate ? formData.returnDate.toLocaleDateString() : 'dd/mm/yyyy'}
+                  value={formData.returnDate ? formData.returnDate.toLocaleDateString() : 'mm/dd/yyyy'}
                   onClick={() => setShowReturnPicker(!showReturnPicker)}
                   readOnly
                 />
@@ -374,7 +438,7 @@ const FlightSearchForm = () => {
                       onChange={handleReturnDateChange}
                       minDate={formData.departureDate || today}
                       maxDate={maxDate}
-                      dateFormat="dd/MM/yyyy"
+                      dateFormat="MM/dd/yyyy"
                       inline
                     />
                   </CalendarOverlay>
@@ -384,19 +448,45 @@ const FlightSearchForm = () => {
           )}
           <FormGroup>
             <Label><Users size={18} /> Passengers</Label>
-            <Select name="passengers" value={formData.passengers} onChange={handleChange}>
+            <select
+              style={{
+                padding: '0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                width: '100%',
+                backgroundColor: '#f5f5f5',
+                height: '2.5rem'
+              }}
+              name="passengers"
+              value={formData.passengers}
+              onChange={handleChange}
+            >
               {[1, 2, 3, 4, 5].map(num => (
                 <option key={num} value={num}>{num} Passenger{num > 1 ? 's' : ''}</option>
               ))}
-            </Select>
+            </select>
           </FormGroup>
           <FormGroup>
             <Label><Plane size={18} /> Class</Label>
-            <Select name="class" value={formData.class} onChange={handleChange}>
+            <select
+              style={{
+                padding: '0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                width: '100%',
+                backgroundColor: '#f5f5f5',
+                height: '2.5rem'
+              }}
+              name="class"
+              value={formData.class}
+              onChange={handleChange}
+            >
               <option value="economy">Economy</option>
               <option value="premium_economy">Premium Economy</option>
               <option value="business">Business</option>
-            </Select>
+            </select>
           </FormGroup>
           <Button type="submit">Search Flights</Button>
         </Form>
