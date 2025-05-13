@@ -9,8 +9,12 @@ const StepFlowContainer = styled.div`
   background: ${props => props.theme.colors?.white || '#ffffff'};
   border-bottom: 1px solid ${props => props.theme.colors?.gray?.[200] || '#e5e7eb'};
   margin-bottom: 1rem;
-  width: 100%; /* Ensure it spans the full width */
-  max-width: 1200px; /* Match the max-width of other containers if needed */
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 10; /* Ensure it's above other elements */
 `;
 
 const Step = styled.div`
@@ -58,7 +62,7 @@ const StepFlow = ({ currentStep }) => {
       {steps.map(step => (
         <Step key={step.number} isActive={step.number === currentStep}>
           {step.number < currentStep ? (
-            <CheckCircle size={24} color={props => props.theme.colors?.gray?.[700] || '#4b5563'} />
+            <CheckCircle size={24} color={step.number === currentStep ? '#ffffff' : '#4b5563'} />
           ) : (
             <StepNumber isActive={step.number === currentStep}>
               {step.number}

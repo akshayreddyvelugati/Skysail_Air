@@ -9,6 +9,23 @@ const pool = new Pool({
   port: 5432,
 });
 
+// Function to parse date: handles both YYYY-MM-DD and MM/DD/YYYY formats
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+
+  // Check if the date is in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr; // Already in the correct format
+  }
+
+  // Otherwise, assume MM/DD/YYYY format
+  const [month, day, year] = dateStr.split('/');
+  if (!month || !day || !year) {
+    throw new Error('Invalid departure date format');
+  }
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
 const getAllFlights = async (pool, filters = {}) => {
   const { origin_airport_id, destination_airport_id, departure_date } = filters;
 
@@ -25,8 +42,12 @@ const getAllFlights = async (pool, filters = {}) => {
       params.push(destination_airport_id);
     }
     if (departure_date) {
+      const formattedDate = parseDate(departure_date);
+      if (!formattedDate) {
+        throw new Error('Invalid departure date format');
+      }
       query += ' AND departure_date = $' + (params.length + 1);
-      params.push(departure_date);
+      params.push(formattedDate);
     }
 
     const result = await pool.query(query, params);

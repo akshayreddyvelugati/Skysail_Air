@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import FlightSearchForm from './pages/FlightSearchForm';
 import SearchResults from './pages/SearchResults';
 import SelectFlight from './pages/SelectFlight';
+import PassengerDetails from './pages/PassengerDetails';
 import SeatMap from './pages/SeatMap';
 import ConfirmationPage from './pages/ConfirmationPage';
 import ContactPage from './pages/ContactPage';
@@ -39,6 +40,7 @@ function App() {
                       <Route path="/search-results" element={<SearchResults />} />
                       <Route path="/select-flight/:departureId/:returnId" element={<SelectFlight />} />
                       <Route path="/select-flight/:flightId" element={<SelectFlight />} />
+                      <Route path="/passenger-details" element={<PassengerDetails />} />
                       <Route path="/seat-selection/:departureId/:returnId" element={<SeatMap />} />
                       <Route path="/seat-selection/:flightId" element={<SeatMap />} />
                       <Route path="/confirmation/:bookingId" element={<ConfirmationPage />} />
@@ -47,7 +49,7 @@ function App() {
                       <Route path="/baggage-allowance" element={<BaggageAllowance />} />
                       <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                    </Routes>
+                  </Routes>
                   </main>
                   <Footer />
                 </>

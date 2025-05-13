@@ -1,163 +1,163 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, X, Check, Search, Plane, Calendar, Clock } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import styled from 'styled-components';
 
 const Container = styled.div`
- background: white;
- border-radius: 0.75rem;
- box-shadow: ${props => props.theme.shadows.sm};
- overflow: hidden;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: ${props => props.theme.shadows.sm};
+  overflow: hidden;
 `;
 
 const Header = styled.div`
- padding: 1.5rem;
- display: flex;
- justify-content: space-between;
- align-items: center;
- border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
 `;
 
 const SearchBar = styled.div`
- display: flex;
- align-items: center;
- gap: 0.5rem;
- background: ${props => props.theme.colors.gray[100]};
- padding: 0.5rem 1rem;
- border-radius: 0.5rem;
- width: 300px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: ${props => props.theme.colors.gray[100]};
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  width: 300px;
 `;
 
 const SearchInput = styled.input`
- border: none;
- background: none;
- outline: none;
- width: 100%;
- font-size: 0.875rem;
- color: ${props => props.theme.colors.gray[900]};
- &::placeholder {
-   color: ${props => props.theme.colors.gray[400]};
- }
+  border: none;
+  background: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.gray[900]};
+  &::placeholder {
+    color: ${props => props.theme.colors.gray[400]};
+  }
 `;
 
 const Button = styled.button`
- display: flex;
- align-items: center;
- gap: 0.5rem;
- padding: 0.5rem 1rem;
- border-radius: 0.375rem;
- font-weight: 500;
- font-size: 0.875rem;
- transition: all 0.2s;
- 
- ${props => props.variant === 'primary' && `
-   background: ${props.theme.gradients.primary};
-   color: white;
-   &:hover {
-     transform: translateY(-1px);
-   }
- `}
- 
- ${props => props.variant === 'danger' && `
-   background: ${props.theme.colors.error}10;
-   color: ${props.theme.colors.error};
-   &:hover {
-     background: ${props.theme.colors.error}20;
-   }
- `}
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  
+  ${props => props.variant === 'primary' && `
+    background: ${props.theme.gradients.primary};
+    color: white;
+    &:hover {
+      transform: translateY(-1px);
+    }
+  `}
+  
+  ${props => props.variant === 'danger' && `
+    background: ${props.theme.colors.error}10;
+    color: ${props.theme.colors.error};
+    &:hover {
+      background: ${props.theme.colors.error}20;
+    }
+  `}
 `;
 
 const Table = styled.table`
- width: 100%;
- border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 `;
 
 const Th = styled.th`
- text-align: left;
- padding: 1rem;
- color: ${props => props.theme.colors.gray[500]};
- font-weight: 500;
- border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
+  text-align: left;
+  padding: 1rem;
+  color: ${props => props.theme.colors.gray[500]};
+  font-weight: 500;
+  border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
 `;
 
 const Td = styled.td`
- padding: 1rem;
- border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
+  padding: 1rem;
+  border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
 `;
 
 const Actions = styled.div`
- display: flex;
- gap: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
 `;
 
 const Modal = styled.div`
- position: fixed;
- top: 0;
- left: 0;
- right: 0;
- bottom: 0;
- background: rgba(0, 0, 0, 0.5);
- display: flex;
- align-items: center;
- justify-content: center;
- z-index: 50;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
 `;
 
 const ModalContent = styled.div`
- background: white;
- border-radius: 0.75rem;
- padding: 2rem;
- width: 100%;
- max-width: 500px;
+  background: white;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
 `;
 
 const Form = styled.form`
- display: flex;
- flex-direction: column;
- gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `;
 
 const FormGroup = styled.div`
- display: flex;
- flex-direction: column;
- gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 `;
 
 const Label = styled.label`
- font-weight: 500;
- color: ${props => props.theme.colors.gray[700]};
+  font-weight: 500;
+  color: ${props => props.theme.colors.gray[700]};
 `;
 
 const Input = styled.input`
- padding: 0.5rem;
- border: 1px solid ${props => props.theme.colors.gray[300]};
- border-radius: 0.375rem;
- font-size: 0.875rem;
- &:focus {
-   outline: none;
-   border-color: ${props => props.theme.colors.secondary};
-   box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
- }
+  padding: 0.5rem;
+  border: 1px solid ${props => props.theme.colors.gray[300]};
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.secondary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
+  }
 `;
 
 const Select = styled.select`
- padding: 0.5rem;
- border: 1px solid ${props => props.theme.colors.gray[300]};
- border-radius: 0.375rem;
- font-size: 0.875rem;
- background-color: white;
- &:focus {
-   outline: none;
-   border-color: ${props => props.theme.colors.secondary};
-   box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
- }
+  padding: 0.5rem;
+  border: 1px solid ${props => props.theme.colors.gray[300]};
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  background-color: white;
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.secondary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
+  }
 `;
 
 const ModalButtons = styled.div`
- display: flex;
- justify-content: flex-end;
- gap: 1rem;
- margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
 `;
 
 const LoadingMessage = styled.p`
@@ -167,8 +167,9 @@ const LoadingMessage = styled.p`
 `;
 
 const ErrorMessage = styled.p`
+  padding: 1rem;
+  text-align: center;
   color: ${props => props.theme.colors.error};
-  margin-top: 0.5rem;
 `;
 
 const airports = [
@@ -220,7 +221,7 @@ const FlightScheduleManager = () => {
     arrivalTime: '',
     aircraft: '',
     status: 'scheduled',
-    price: 0
+    price: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -228,6 +229,7 @@ const FlightScheduleManager = () => {
   const fetchFlights = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await axios.get('http://localhost:5000/api/flights');
       const mappedFlights = response.data.map(flight => {
         const originAirport = airports.find(a => a.id === flight.origin_airport_id);
@@ -243,13 +245,13 @@ const FlightScheduleManager = () => {
           arrivalTime: flight.arrival_time,
           aircraft: aircraftData ? `${aircraftData.manufacturer} ${aircraftData.model}` : flight.aircraft_id.toString(),
           status: flight.status.toLowerCase(),
-          price: parseFloat(flight.price)
+          price: parseFloat(flight.price),
         };
       });
       setFlights(mappedFlights);
     } catch (error) {
       console.error('Error fetching flights:', error);
-      setError('Failed to fetch flights');
+      setError('Failed to fetch flights. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -280,14 +282,26 @@ const FlightScheduleManager = () => {
       arrivalTime: '',
       aircraft: '',
       status: 'scheduled',
-      price: 0
+      price: 0,
     });
+    setError(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (flight) => {
     setEditingFlight(flight);
-    setFormData(flight);
+    setFormData({
+      flightNumber: flight.flightNumber,
+      origin: airports.find(a => a.code === flight.origin)?.id || '',
+      destination: airports.find(a => a.code === flight.destination)?.id || '',
+      departureDate: flight.departureDate.split('T')[0], // Ensure only date part is used
+      departureTime: flight.departureTime,
+      arrivalTime: flight.arrivalTime,
+      aircraft: aircraft.find(a => `${a.manufacturer} ${a.model}` === flight.aircraft)?.id || '',
+      status: flight.status,
+      price: flight.price,
+    });
+    setError(null);
     setIsModalOpen(true);
   };
 
@@ -298,14 +312,14 @@ const FlightScheduleManager = () => {
         await fetchFlights();
       } catch (error) {
         console.error('Error deleting flight:', error);
-        setError('Failed to delete flight');
+        setError('Failed to delete flight. Please try again.');
       }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const dataToSend = {
       flight_number: formData.flightNumber,
       origin_airport_id: parseInt(formData.origin),
@@ -314,8 +328,8 @@ const FlightScheduleManager = () => {
       departure_date: formData.departureDate,
       departure_time: formData.departureTime,
       arrival_time: formData.arrivalTime,
-      status: formData.status.charAt(0).toUpperCase() + formData.status.slice(1), // Capitalize the status
-      price: parseFloat(formData.price)
+      status: formData.status.charAt(0).toUpperCase() + formData.status.slice(1),
+      price: parseFloat(formData.price),
     };
 
     try {
@@ -329,11 +343,7 @@ const FlightScheduleManager = () => {
     } catch (error) {
       console.error('Error saving flight:', error);
       const errorMessage = error.response?.data?.error || 'Failed to save flight';
-      if (errorMessage.includes('flight_number')) {
-        setError('Flight number already exists. Please choose a different flight number.');
-      } else {
-        setError(errorMessage);
-      }
+      setError(errorMessage);
     }
   };
 
@@ -341,7 +351,7 @@ const FlightScheduleManager = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'price' ? parseFloat(value) : value
+      [name]: name === 'price' ? parseFloat(value) || 0 : value,
     }));
   };
 
@@ -360,6 +370,10 @@ const FlightScheduleManager = () => {
       default:
         return '#6B7280';
     }
+  };
+
+  const formatDate = (dateString) => {
+    return dateString.split('T')[0]; // Extracts only the date part (YYYY-MM-DD)
   };
 
   return (
@@ -409,7 +423,7 @@ const FlightScheduleManager = () => {
                   <Td>{flight.flightNumber}</Td>
                   <Td>{flight.origin}</Td>
                   <Td>{flight.destination}</Td>
-                  <Td>{flight.departureDate}</Td>
+                  <Td>{formatDate(flight.departureDate)}</Td>
                   <Td>{flight.departureTime}</Td>
                   <Td>{flight.arrivalTime}</Td>
                   <Td>{flight.aircraft}</Td>
@@ -418,7 +432,7 @@ const FlightScheduleManager = () => {
                       {flight.status.charAt(0).toUpperCase() + flight.status.slice(1)}
                     </span>
                   </Td>
-                  <Td>₹{flight.price}</Td>
+                  <Td>₹{flight.price.toFixed(2)}</Td>
                   <Td>
                     <Actions>
                       <Button onClick={() => handleEdit(flight)}>

@@ -9,7 +9,8 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  padding-bottom: 100px; /* Ensure space for footer */
+  padding-top: 6rem; /* Adjust for fixed Navbar height */
+  padding-bottom: 100px;
 `;
 
 const Header = styled.div`
@@ -175,60 +176,45 @@ const LoadingMessage = styled.div`
 `;
 
 const SearchResults = () => {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
+  const searchParams = location.state || {};
+  const { from, to, departureDate, returnDate, passengers, class: flightClass, tripType } = searchParams;
+
   const [flights, setFlights] = useState([]);
   const [returnFlights, setReturnFlights] = useState([]);
   const [airports, setAirports] = useState([]);
-  const [selectedDepartureFlight, setSelectedDepartureFlight] = useState(null);
-  const [selectedReturnFlight, setSelectedReturnFlight] = useState(null);
-  const [passengerCount, setPassengerCount] = useState(1);
-  const [isRoundTrip, setIsRoundTrip] = useState(false);
-  const [showReturnFlights, setShowReturnFlights] = useState(false);
-  const [loadingAirports, setLoadingAirports] = useState(false);
   const [loadingFlights, setLoadingFlights] = useState(false);
+  const [loadingAirports, setLoadingAirports] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState('price');
-
-  const searchParams = location.state || {
-    from: '',
-    to: '',
-    departureDate: '',
-    returnDate: '',
-    class: 'economy',
-    passengers: '1',
-    tripType: 'one-way'
-  };
+  const [departureFlight, setDepartureFlight] = useState(null); // Track selected departure flight
+  const isRoundTrip = tripType === 'round-trip';
 
   useEffect(() => {
-    setIsRoundTrip(searchParams.tripType === 'round-trip');
-    setPassengerCount(parseInt(searchParams.passengers) || 1);
-  }, [searchParams]);
-
-  useEffect(() => {
-    setLoadingAirports(true);
-    axios
-      .get('http://localhost:5000/api/airports')
-      .then(response => {
+    const fetchAirports = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/airports');
         setAirports(response.data);
         setLoadingAirports(false);
-      })
-      .catch(err => {
-        setError('Failed to load airports');
+      } catch (err) {
+        setError('Failed to fetch airports');
         setLoadingAirports(false);
-      });
+      }
+    };
+    fetchAirports();
   }, []);
 
   useEffect(() => {
     if (loadingAirports) return;
 
-    if (!searchParams.from || !searchParams.to || !searchParams.departureDate) {
+    if (!from || !to || !departureDate) {
       setError('Missing search parameters');
       return;
     }
 
-    const originAirport = airports.find(a => a.code === searchParams.from);
-    const destAirport = airports.find(a => a.code === searchParams.to);
+    const originAirport = airports.find(a => a.code === from);
+    const destAirport = airports.find(a => a.code === to);
 
     if (!originAirport || !destAirport) {
       setError('Invalid airport codes');
@@ -238,13 +224,16 @@ const SearchResults = () => {
     setLoadingFlights(true);
     setError(null);
 
+    const formattedDepartureDate = departureDate; // Use as-is: '06/02/2025'
+    const formattedReturnDate = returnDate || null;
+
     // Fetch departure flights
     axios
       .get('http://localhost:5000/api/flights', {
         params: {
           origin_airport_id: originAirport.id,
           destination_airport_id: destAirport.id,
-          departure_date: searchParams.departureDate,
+          departure_date: formattedDepartureDate,
         },
       })
       .then(response => {
@@ -266,18 +255,19 @@ const SearchResults = () => {
         setLoadingFlights(false);
       })
       .catch(err => {
-        setError('Failed to fetch departure flights');
+        console.error('Error fetching departure flights:', err.response?.data || err.message);
+        setError('Failed to fetch departure flights: ' + (err.response?.data?.error || err.message));
         setLoadingFlights(false);
       });
 
     // Fetch return flights if round-trip
-    if (isRoundTrip && searchParams.returnDate) {
+    if (isRoundTrip && formattedReturnDate) {
       axios
         .get('http://localhost:5000/api/flights', {
           params: {
             origin_airport_id: destAirport.id,
             destination_airport_id: originAirport.id,
-            departure_date: searchParams.returnDate,
+            departure_date: formattedReturnDate,
           },
         })
         .then(response => {
@@ -298,212 +288,206 @@ const SearchResults = () => {
           }
         })
         .catch(err => {
-          setError('Failed to fetch return flights');
+          console.error('Error fetching return flights:', err.response?.data || err.message);
+          setError('Failed to fetch return flights: ' + (err.response?.data?.error || err.message));
         });
     }
-  }, [searchParams.from, searchParams.to, searchParams.departureDate, searchParams.returnDate, isRoundTrip, loadingAirports, airports]);
-
-  useEffect(() => {
-    let sortedDeparture = [...flights];
-    let sortedReturn = [...returnFlights];
-
-    if (sortBy === 'price') {
-      sortedDeparture.sort((a, b) => a.price - b.price);
-      sortedReturn.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'departure') {
-      sortedDeparture.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-      sortedReturn.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-    }
-
-    setFlights(sortedDeparture);
-    setReturnFlights(sortedReturn);
-  }, [sortBy]);
+  }, [from, to, departureDate, returnDate, isRoundTrip, loadingAirports, airports]);
 
   const calculateDuration = (departureTime, arrivalTime) => {
     const [depHours, depMinutes] = departureTime.split(':').map(Number);
     const [arrHours, arrMinutes] = arrivalTime.split(':').map(Number);
-    const dep = new Date();
-    const arr = new Date();
-    dep.setHours(depHours, depMinutes);
-    arr.setHours(arrHours, arrMinutes);
-    if (arr < dep) arr.setDate(arr.getDate() + 1);
-    const diffMs = arr - dep;
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const depTotalMinutes = depHours * 60 + depMinutes;
+    let arrTotalMinutes = arrHours * 60 + arrMinutes;
+    if (arrTotalMinutes < depTotalMinutes) {
+      arrTotalMinutes += 24 * 60;
+    }
+    const durationMinutes = arrTotalMinutes - depTotalMinutes;
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
     return `${hours}h ${minutes}m`;
   };
 
-  const handleSelectDepartureFlight = (flight) => {
-    setSelectedDepartureFlight(flight.id);
-    if (isRoundTrip) {
-      setShowReturnFlights(true);
-    } else {
-      navigate(`/select-flight/${flight.id}`, { 
-        state: { passengers: passengerCount, flight, tripType: searchParams.tripType }
+  const handleFlightSelect = (flight, type) => {
+    if (type === 'departure') {
+      if (isRoundTrip) {
+        setDepartureFlight(flight); // Store departure flight for round-trip
+      } else {
+        // One-way: Navigate directly to SelectFlight
+        navigate(`/select-flight/${flight.id}`, {
+          state: {
+            ...searchParams,
+            departureFlight: flight,
+            passengers,
+            tripType,
+          },
+        });
+      }
+    } else if (type === 'return' && departureFlight) {
+      // Round-trip: Navigate after both flights are selected
+      navigate(`/select-flight/${departureFlight.id}/${flight.id}`, {
+        state: {
+          ...searchParams,
+          departureFlight,
+          returnFlight: flight,
+          passengers,
+          tripType,
+        },
       });
     }
   };
 
-  const handleSelectReturnFlight = (flight) => {
-    setSelectedReturnFlight(flight.id);
-  };
+  const sortedFlights = [...flights].sort((a, b) => {
+    if (sortBy === 'price') return a.price - b.price;
+    return 0;
+  });
 
-  const handleContinue = () => {
-    if (isRoundTrip && selectedDepartureFlight && selectedReturnFlight) {
-      navigate(`/select-flight/${selectedDepartureFlight}/${selectedReturnFlight}`, { 
-        state: { passengers: passengerCount, tripType: searchParams.tripType }
-      });
-    } else if (!isRoundTrip && selectedDepartureFlight) {
-      navigate(`/select-flight/${selectedDepartureFlight}`, { 
-        state: { passengers: passengerCount, tripType: searchParams.tripType }
-      });
-    }
-  };
+  const sortedReturnFlights = [...returnFlights].sort((a, b) => {
+    if (sortBy === 'price') return a.price - b.price;
+    return 0;
+  });
 
-  const handleBackToSearch = () => {
-    navigate('/');
-  };
+  if (loadingFlights || loadingAirports) {
+    return (
+      <Container>
+        <StepFlow currentStep={1} />
+        <LoadingMessage>Loading...</LoadingMessage>
+      </Container>
+    );
+  }
 
-  const sortOptions = [
-    { value: 'price', label: 'Price' },
-    { value: 'departure', label: 'Departure Time' },
-  ];
-
-  const canContinue = !isRoundTrip ? selectedDepartureFlight : 
-                     (selectedDepartureFlight && selectedReturnFlight);
+  if (error) {
+    return (
+      <Container>
+        <StepFlow currentStep={1} />
+        <Header>
+          <div>
+            <Title>Available Flights</Title>
+            <SearchSummary>
+              {from} → {to} • {departureDate} • {passengers} Passenger(s) • {flightClass}
+            </SearchSummary>
+          </div>
+        </Header>
+        <FilterSort>
+          <FilterLabel htmlFor="sort">Sort by:</FilterLabel>
+          <FilterSelect
+            id="sort"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="price">Price</option>
+          </FilterSelect>
+        </FilterSort>
+        <ErrorContainer>
+          <ErrorMessage>{error}</ErrorMessage>
+          <BackButton onClick={() => navigate('/')}>
+            Back to Search Form
+          </BackButton>
+        </ErrorContainer>
+      </Container>
+    );
+  }
 
   return (
     <Container>
-      <StepFlow currentStep={2} />
+      <StepFlow currentStep={1} />
       <Header>
         <div>
           <Title>Available Flights</Title>
           <SearchSummary>
-            <Plane size={20} />
-            {searchParams.from} → {searchParams.to}
-            <span> • </span>
-            {searchParams.departureDate}
-            {isRoundTrip && (
-              <>
-                <span> • </span>
-                {searchParams.returnDate}
-              </>
-            )}
-            <span> • </span>
-            {passengerCount} Passenger(s)
-            <span> • </span>
-            {searchParams.class}
+            {from} → {to} • {departureDate} • {passengers} Passenger(s) • {flightClass}
           </SearchSummary>
         </div>
-        <FilterSort>
-          <FilterLabel htmlFor="sort">Sort by:</FilterLabel>
-          <FilterSelect id="sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            {sortOptions.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </FilterSelect>
-        </FilterSort>
       </Header>
+      <FilterSort>
+        <FilterLabel htmlFor="sort">Sort by:</FilterLabel>
+        <FilterSelect
+          id="sort"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="price">Price</option>
+        </FilterSelect>
+      </FilterSort>
 
-      {loadingAirports ? (
-        <LoadingMessage>Loading airports...</LoadingMessage>
-      ) : error ? (
-        <ErrorContainer>
-          <ErrorMessage>{error}</ErrorMessage>
-          <BackButton onClick={handleBackToSearch}>Back to Search Form</BackButton>
-        </ErrorContainer>
-      ) : loadingFlights ? (
-        <LoadingMessage>Loading flights...</LoadingMessage>
-      ) : (
-        <>
-          <FlightListsContainer>
-            <FlightListSection>
-              <FlightListTitle>{isRoundTrip ? 'Departure Flights' : 'Select Your Flight'}</FlightListTitle>
-              {flights.length === 0 ? (
-                <ErrorContainer>
-                  <ErrorMessage>No flights available</ErrorMessage>
-                  <BackButton onClick={handleBackToSearch}>Back to Search Form</BackButton>
-                </ErrorContainer>
-              ) : (
-                <FlightList>
-                  {flights.map(flight => (
-                    <FlightCard key={flight.id}>
-                      <FlightInfo>
-                        <Route>
-                          <span>{flight.from}</span>
-                          <Plane size={20} />
-                          <span>{flight.to}</span>
-                        </Route>
-                        <Time>
-                          <Clock size={18} />
-                          {flight.departureTime} - {flight.arrivalTime} ({flight.duration})
-                        </Time>
-                        <div>{flight.airline}</div>
-                      </FlightInfo>
-                      <Price>
-                        <Amount>₹{flight.price}</Amount>
-                        <SelectButton
-                          onClick={() => handleSelectDepartureFlight(flight)}
-                        >
-                          {selectedDepartureFlight === flight.id ? 'Selected' : 'Select'}
-                        </SelectButton>
-                      </Price>
-                    </FlightCard>
-                  ))}
-                </FlightList>
-              )}
-            </FlightListSection>
-
-            {showReturnFlights && isRoundTrip && (
-              <FlightListSection>
-                <FlightListTitle>Return Flights</FlightListTitle>
-                {returnFlights.length === 0 ? (
-                  <ErrorContainer>
-                    <ErrorMessage>No return flights available</ErrorMessage>
-                    <BackButton onClick={handleBackToSearch}>Back to Search Form</BackButton>
-                  </ErrorContainer>
-                ) : (
-                  <FlightList>
-                    {returnFlights.map(flight => (
-                      <FlightCard key={flight.id}>
-                        <FlightInfo>
-                          <Route>
-                            <span>{flight.from}</span>
-                            <Plane size={20} />
-                            <span>{flight.to}</span>
-                          </Route>
-                          <Time>
-                            <Clock size={18} />
-                            {flight.departureTime} - {flight.arrivalTime} ({flight.duration})
-                          </Time>
-                          <div>{flight.airline}</div>
-                        </FlightInfo>
-                        <Price>
-                          <Amount>₹{flight.price}</Amount>
-                          <SelectButton
-                            onClick={() => handleSelectReturnFlight(flight)}
-                          >
-                            {selectedReturnFlight === flight.id ? 'Selected' : 'Select'}
-                          </SelectButton>
-                        </Price>
-                      </FlightCard>
-                    ))}
-                  </FlightList>
-                )}
-              </FlightListSection>
+      <FlightListsContainer>
+        <FlightListSection>
+          <FlightListTitle>Departure Flights</FlightListTitle>
+          <FlightList>
+            {sortedFlights.length === 0 ? (
+              <ErrorMessage>No departure flights found</ErrorMessage>
+            ) : (
+              sortedFlights.map(flight => (
+                <FlightCard key={flight.id}>
+                  <FlightInfo>
+                    <Route>
+                      <span>{flight.from}</span>
+                      <Plane size={20} />
+                      <span>{flight.to}</span>
+                    </Route>
+                    <Time>
+                      <Clock size={16} />
+                      <span>
+                        {flight.departureTime} - {flight.arrivalTime} • {flight.duration}
+                      </span>
+                    </Time>
+                    <div>{flight.airline} • {flight.flightNumber}</div>
+                  </FlightInfo>
+                  <Price>
+                    <Amount>₹{flight.price.toFixed(2)}</Amount>
+                    <SelectButton onClick={() => handleFlightSelect(flight, 'departure')}>
+                      Select
+                    </SelectButton>
+                  </Price>
+                </FlightCard>
+              ))
             )}
-          </FlightListsContainer>
+          </FlightList>
+        </FlightListSection>
 
-          {showReturnFlights && isRoundTrip && (
-            <BookNowButton 
-              onClick={handleContinue}
-              disabled={!canContinue}
-            >
-              {canContinue ? 'Continue to Booking' : 'Select Both Flights to Continue'}
-            </BookNowButton>
-          )}
-        </>
-      )}
+        {isRoundTrip && (
+          <FlightListSection>
+            <FlightListTitle>Return Flights</FlightListTitle>
+            <FlightList>
+              {sortedReturnFlights.length === 0 ? (
+                <ErrorMessage>No return flights found</ErrorMessage>
+              ) : (
+                sortedReturnFlights.map(flight => (
+                  <FlightCard key={flight.id}>
+                    <FlightInfo>
+                      <Route>
+                        <span>{flight.from}</span>
+                        <Plane size={20} />
+                        <span>{flight.to}</span>
+                      </Route>
+                      <Time>
+                        <Clock size={16} />
+                        <span>
+                          {flight.departureTime} - {flight.arrivalTime} • {flight.duration}
+                        </span>
+                      </Time>
+                      <div>{flight.airline} • {flight.flightNumber}</div>
+                    </FlightInfo>
+                    <Price>
+                      <Amount>₹{flight.price.toFixed(2)}</Amount>
+                      <SelectButton
+                        onClick={() => handleFlightSelect(flight, 'return')}
+                        disabled={!departureFlight} // Disable until departure flight is selected
+                      >
+                        Select
+                      </SelectButton>
+                    </Price>
+                  </FlightCard>
+                ))
+              )}
+            </FlightList>
+          </FlightListSection>
+        )}
+      </FlightListsContainer>
+
+      <BackButton onClick={() => navigate('/')}>
+        Back to Search Form
+      </BackButton>
     </Container>
   );
 };
