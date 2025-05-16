@@ -164,10 +164,10 @@ const ErrorContainer = styled.div`
 const PassengerDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { departureFlight, returnFlight, passengers: passengerCount = 1, tripType = 'one-way' } = location.state || {};
+  const { departureFlight, returnFlight, passengers: preFilledPassengers, passengerCount = 1, tripType = 'one-way' } = location.state || {};
 
   const [passengerData, setPassengerData] = useState(
-    Array.from({ length: parseInt(passengerCount) }, () => ({
+    preFilledPassengers || Array.from({ length: parseInt(passengerCount) }, () => ({
       firstName: '',
       lastName: '',
       email: '',

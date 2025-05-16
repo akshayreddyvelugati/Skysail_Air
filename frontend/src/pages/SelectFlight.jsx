@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import axios from 'axios';
 import StepFlow from './StepFlow';
 import { Calendar, Clock, Plane } from 'lucide-react';
 
@@ -9,14 +8,14 @@ const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  padding-bottom: 100px; /* Ensure space for footer */
+  padding-bottom: 100px; /* Ensure space for footer */ 
 `;
 
 const FlightSummary = styled.div`
   background: white;
   border-radius: 1rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  padding: 1.5rem;    
   margin-bottom: 2rem;
 `;
 
@@ -154,12 +153,6 @@ const ContinueButton = styled.button`
   }
 `;
 
-const LoadingMessage = styled.div`
-  text-align: center;
-  padding: 1rem;
-  color: #6b7280;
-`;
-
 const ErrorContainer = styled.div`
   text-align: center;
   padding: 1rem;
@@ -170,11 +163,8 @@ const SelectFlight = () => {
   const { id, returnId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { passengers: passengerCount = 1, tripType = 'one-way' } = location.state || {};
-  const [departureFlight, setDepartureFlight] = useState(null);
-  const [returnFlight, setReturnFlight] = useState(null);
+  const { departureFlight, returnFlight, passengers: passengerCount = 1, tripType = 'one-way' } = location.state || {};
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [passengerData, setPassengerData] = useState(
     Array.from({ length: passengerCount }, () => ({
       firstName: '',
@@ -190,53 +180,6 @@ const SelectFlight = () => {
       mealPreference: '',
     }))
   );
-
-  useEffect(() => {
-    const fetchFlights = async () => {
-      try {
-        // Fetch departure flight
-        const departureResponse = await axios.get(`http://localhost:5000/api/flights/${id}`);
-        const flight = departureResponse.data;
-        const airportsResponse = await axios.get('http://localhost:5000/api/airports');
-        const airports = airportsResponse.data;
-        setDepartureFlight({
-          id: flight.id.toString(),
-          from: airports.find(a => a.id === flight.origin_airport_id)?.code || 'Unknown',
-          to: airports.find(a => a.id === flight.destination_airport_id)?.code || 'Unknown',
-          departureTime: flight.departure_time,
-          arrivalTime: flight.arrival_time,
-          duration: calculateDuration(flight.departure_time, flight.arrival_time),
-          price: parseFloat(flight.price),
-          airline: 'SkySail Airlines',
-          departureDate: flight.departure_date,
-          flightNumber: flight.flight_number,
-        });
-
-        // Fetch return flight if round-trip
-        if (tripType === 'round-trip' && returnId) {
-          const returnResponse = await axios.get(`http://localhost:5000/api/flights/${returnId}`);
-          const returnFlightData = returnResponse.data;
-          setReturnFlight({
-            id: returnFlightData.id.toString(),
-            from: airports.find(a => a.id === returnFlightData.origin_airport_id)?.code || 'Unknown',
-            to: airports.find(a => a.id === returnFlightData.destination_airport_id)?.code || 'Unknown',
-            departureTime: returnFlightData.departure_time,
-            arrivalTime: returnFlightData.arrival_time,
-            duration: calculateDuration(returnFlightData.departure_time, returnFlightData.arrival_time),
-            price: parseFloat(returnFlightData.price),
-            airline: 'SkySail Airlines',
-            departureDate: returnFlightData.departure_date,
-            flightNumber: returnFlightData.flight_number,
-          });
-        }
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load flight details');
-        setLoading(false);
-      }
-    };
-    fetchFlights();
-  }, [id, returnId, tripType]);
 
   const calculateDuration = (departure, arrival) => {
     const [depHours, depMinutes] = departure.split(':').map(Number);
@@ -287,7 +230,7 @@ const SelectFlight = () => {
     setPassengerData(newPassengerData);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const hasErrors = passengerData.some(p => 
       p.emailError || 
@@ -306,86 +249,29 @@ const SelectFlight = () => {
       return;
     }
 
-    try {
-      // Save passengers
-      const passengerPromises = passengerData.map(async (passenger) => {
-        const response = await axios.post('http://localhost:5000/api/passengers', {
-          first_name: passenger.firstName,
-          last_name: passenger.lastName,
-          email: passenger.email,
-          phone: passenger.phone,
-          date_of_birth: passenger.dateOfBirth.split('/').reverse().join('-'),
-          gender: passenger.gender,
-          nationality: passenger.nationality,
-          meal_preference: passenger.mealPreference || null,
-          passport_number: null,
-        });
-        return response.data;
-      });
-
-      const savedPassengers = await Promise.all(passengerPromises);
-
-      // Create booking
-      const bookingId = `SKS-${Date.now()}-${Math.floor(Math.random() * 1000)}`.slice(0, 30);
-      const totalPrice = departureFlight.price * passengerCount + (returnFlight ? returnFlight.price * passengerCount : 0);
-      const bookingResponse = await axios.post('http://localhost:5000/api/bookings', {
-        booking_id: bookingId,
-        flight_id: parseInt(departureFlight.id),
-        return_flight_id: returnFlight ? parseInt(returnFlight.id) : null,
-        total_price: totalPrice,
-        status: 'Confirmed',
-      });
-
-      const booking = bookingResponse.data;
-
-      // Link passengers to booking
-      const passengerBookingPromises = savedPassengers.map(async (passenger) => {
-        await axios.post('http://localhost:5000/api/passenger-bookings', {
-          passenger_id: passenger.id,
-          booking_id: booking.id,
-        });
-      });
-
-      await Promise.all(passengerBookingPromises);
-
-      // Prepare data for seat selection
-      const bookingData = {
-        departureFlight,
-        returnFlight,
-        passengers: savedPassengers,
-        bookingId: booking.id,
-        totalPrice,
-        passengerCount,
-        tripType
-      };
-      sessionStorage.setItem('passengerData', JSON.stringify(savedPassengers));
-      navigate('/seat-selection', { state: bookingData });
-    } catch (err) {
-      setError('Failed to save passenger details and create booking');
-    }
+    const bookingData = {
+      departureFlight,
+      returnFlight,
+      passengers: passengerData,
+      passengerCount,
+      tripType
+    };
+    sessionStorage.setItem('passengerData', JSON.stringify(passengerData));
+    navigate('/passenger-details', { state: bookingData });
   };
 
-  if (loading) {
+  if (!departureFlight) {
     return (
       <Container>
-        <StepFlow currentStep={3} />
-        <LoadingMessage>Loading flight details...</LoadingMessage>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <StepFlow currentStep={3} />
-        <ErrorContainer>{error}</ErrorContainer>
+        <StepFlow currentStep={2} />
+        <ErrorContainer>Flight details not available</ErrorContainer>
       </Container>
     );
   }
 
   return (
     <Container>
-      <StepFlow currentStep={3} />
+      <StepFlow currentStep={2} />
       <FlightSummary>
         <FlightDetails>
           <DetailItem><strong>Passenger Count:</strong> {passengerCount}</DetailItem>
@@ -399,7 +285,7 @@ const SelectFlight = () => {
           </Route>
           <Time>
             <Clock size={18} />
-            {departureFlight.departureTime} - {departureFlight.arrivalTime} ({departureFlight.duration})
+            {departureFlight.departureTime} - {departureFlight.arrivalTime} ({departureFlight.duration || calculateDuration(departureFlight.departureTime, departureFlight.arrivalTime)})
           </Time>
           <div>{departureFlight.airline}</div>
         </FlightInfo>
@@ -421,7 +307,7 @@ const SelectFlight = () => {
               </Route>
               <Time>
                 <Clock size={18} />
-                {returnFlight.departureTime} - {returnFlight.arrivalTime} ({returnFlight.duration})
+                {returnFlight.departureTime} - {returnFlight.arrivalTime} ({returnFlight.duration || calculateDuration(returnFlight.departureTime, returnFlight.arrivalTime)})
               </Time>
               <div>{returnFlight.airline}</div>
             </FlightInfo>
@@ -539,10 +425,11 @@ const SelectFlight = () => {
             </div>
           ))}
         </PassengerSection>
-        <ContinueButton type="submit">Continue to Seat Selection</ContinueButton>
+        <ContinueButton type="submit">Continue to Passenger Details</ContinueButton>
       </PassengerForm>
     </Container>
   );
 };
 
 export default SelectFlight;
+

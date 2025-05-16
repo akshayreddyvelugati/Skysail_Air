@@ -350,7 +350,7 @@ const SearchResults = () => {
   if (loadingFlights || loadingAirports) {
     return (
       <Container>
-        <StepFlow currentStep={1} />
+        <StepFlow currentStep={2} />
         <LoadingMessage>Loading...</LoadingMessage>
       </Container>
     );
@@ -359,7 +359,7 @@ const SearchResults = () => {
   if (error) {
     return (
       <Container>
-        <StepFlow currentStep={1} />
+        <StepFlow currentStep={2} />
         <Header>
           <div>
             <Title>Available Flights</Title>
@@ -390,7 +390,7 @@ const SearchResults = () => {
 
   return (
     <Container>
-      <StepFlow currentStep={1} />
+      <StepFlow currentStep={2} />
       <Header>
         <div>
           <Title>Available Flights</Title>
