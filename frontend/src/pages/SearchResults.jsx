@@ -130,21 +130,6 @@ const SelectButton = styled.button`
   }
 `;
 
-const BookNowButton = styled.button`
-  background: ${props => props.theme.gradients.secondary || props.theme.gradients.primary};
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-  margin-top: 2rem;
-  width: 100%;
-  transition: transform 0.2s;
-  &:hover {
-    transform: translateY(-2px);
-  }
-`;
-
 const ErrorMessage = styled.div`
   color: ${props => props.theme.colors.error || 'red'};
   text-align: center;
@@ -247,6 +232,7 @@ const SearchResults = () => {
           price: parseFloat(flight.price),
           airline: 'SkySail Airlines',
           flightNumber: flight.flight_number,
+          departureDate: formattedDepartureDate, // Add departureDate to flight object
         }));
         setFlights(fetchedFlights);
         if (fetchedFlights.length === 0) {
@@ -281,6 +267,7 @@ const SearchResults = () => {
             price: parseFloat(flight.price),
             airline: 'SkySail Airlines',
             flightNumber: flight.flight_number,
+            departureDate: formattedReturnDate, // Add departureDate to flight object
           }));
           setReturnFlights(fetchedReturnFlights);
           if (fetchedReturnFlights.length === 0 && !error) {
@@ -313,24 +300,22 @@ const SearchResults = () => {
       if (isRoundTrip) {
         setDepartureFlight(flight); // Store departure flight for round-trip
       } else {
-        // One-way: Navigate directly to SelectFlight
-        navigate(`/select-flight/${flight.id}`, {
+        // One-way: Navigate directly to PassengerDetails
+        navigate('/passenger-details', {
           state: {
-            ...searchParams,
             departureFlight: flight,
-            passengers,
+            passengerCount: passengers,
             tripType,
           },
         });
       }
     } else if (type === 'return' && departureFlight) {
-      // Round-trip: Navigate after both flights are selected
-      navigate(`/select-flight/${departureFlight.id}/${flight.id}`, {
+      // Round-trip: Navigate directly to PassengerDetails
+      navigate('/passenger-details', {
         state: {
-          ...searchParams,
           departureFlight,
           returnFlight: flight,
-          passengers,
+          passengerCount: passengers,
           tripType,
         },
       });

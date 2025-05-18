@@ -3,11 +3,36 @@ import styled from 'styled-components';
 import { FaFacebook, FaTwitter, FaInstagram } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
+// Footer Wrapper with increased padding and min-height
 const FooterWrapper = styled.footer`
-  background-color: ${({ theme }) => theme.colors.navyBlue || '#1A365D'};
-  color: ${({ theme }) => theme.colors.white || '#ffffff'};
-  padding: 2rem 0;
-  text-align: center;
+  position: relative;
+  padding: 4rem ; /* More padding for a larger footer */
+  min-height: 220px;         /* Ensures footer is tall */
+  text-align: relative ;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* Ensures copyright is at the bottom */
+
+  backdrop-filter: blur(18px);
+  background-color: rgba(28, 28, 28, 0.5);
+  border-radius: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2qIOmxQbOlESwIHbSDdd5psadd3G7Gu857A&s');
+    background-size: cover;
+    background-position: center;
+    filter: blur(10px);
+    opacity: 0.6;
+    z-index: 0;
+  }
 `;
 
 const FooterContent = styled.div`
@@ -15,9 +40,10 @@ const FooterContent = styled.div`
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.5rem;
   position: relative;
   z-index: 1;
+  align-items: stretch;
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -29,13 +55,21 @@ const FooterContent = styled.div`
 
 const FooterSection = styled.div`
   flex: 1;
+  padding: 0 1.5rem;
+  border-right: 5px solid rgba(255, 255, 255, 0.5); /* Thicker vertical line */
+  &:last-child {
+    border-right: none;
+  }
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 `;
 
 const FooterTitle = styled.h3`
   font-family: ${({ theme }) => theme.fonts.primary || "'Poppins', sans-serif"};
-  font-size: 1.5rem;
-  color: ${({ theme }) => theme.colors.white || '#ffffff'};
-  margin-bottom: 1rem;
+  font-size: 1.7rem;
+  color: #ffffff;
+  margin-bottom: 1.2rem;
   font-weight: 600;
   letter-spacing: 0.05em;
 `;
@@ -43,35 +77,35 @@ const FooterTitle = styled.h3`
 const FooterLinks = styled.nav`
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.95rem;
 `;
 
 const FooterLink = styled.a`
-  color: #bfdbfe;
+  color: #ffffff;
   text-decoration: none;
   font-family: ${({ theme }) => theme.fonts.secondary || "'Open Sans', sans-serif"};
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   transition: color 0.3s ease;
   cursor: pointer;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.white || '#ffffff'};
+    color: #bfdbfe;
   }
 `;
 
 const SocialLinks = styled.div`
   display: flex;
   justify-content: center;
-  gap: 1.5rem;
-
+  gap: 1.7rem;
+  margin-top: 1.2rem;
   @media (min-width: 768px) {
     justify-content: flex-start;
   }
 `;
 
 const SocialIcon = styled.a`
-  color: ${({ theme }) => theme.colors.white || '#ffffff'};
-  font-size: 2rem;
+  color: #ffffff;
+  font-size: 2.2rem;
   transition: color 0.3s ease, transform 0.2s ease;
 
   &:hover {
@@ -82,9 +116,13 @@ const SocialIcon = styled.a`
 
 const CopyrightText = styled.p`
   font-family: ${({ theme }) => theme.fonts.secondary || "'Open Sans', sans-serif"};
-  font-size: 0.8rem;
-  color: #d1d5db;
-  margin-top: 1.5rem;
+  font-size: 1rem;
+  color: #ffffff;
+  margin-top: 2.5rem;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+  text-align: center;
 `;
 
 const socialLinks = [
@@ -107,7 +145,7 @@ function Footer() {
       <FooterContent>
         <FooterSection>
           <FooterTitle>Skysail</FooterTitle>
-          <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+          <p style={{ fontSize: '1rem', marginBottom: '1.2rem', color: '#ffffff' }}>
             Elevating your journey with premium travel experiences.
           </p>
           <SocialLinks>
@@ -198,7 +236,9 @@ function Footer() {
           </FooterLinks>
         </FooterSection>
       </FooterContent>
-      <CopyrightText>© {currentYear} Skysail Airways. All rights reserved.</CopyrightText>
+      <CopyrightText>
+        © {currentYear} Skysail Airways. All rights reserved.
+      </CopyrightText>
     </FooterWrapper>
   );
 }

@@ -484,7 +484,6 @@ const FlightSearchForm = () => {
               onChange={handleChange}
             >
               <option value="economy">Economy</option>
-              <option value="premium_economy">Premium Economy</option>
               <option value="business">Business</option>
             </select>
           </FormGroup>

@@ -73,28 +73,33 @@ const TotalPrice = styled.div`
 const PassengerForm = styled.form`
   background: white;
   border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  box-shadow: ${props => props.theme.shadows.md};
+  padding: 2rem;
+`;
+
+const FormTitle = styled.h2`
+  color: ${props => props.theme.colors.primary};
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
 `;
 
 const PassengerSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid ${props => props.theme.colors.gray[300]};
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
 `;
 
-const PassengerHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const PassengerTitle = styled.h3`
-  color: #3b82f6;
-  font-size: 1.25rem;
+const FormGrid = styled.div`
+  display: grid;
+  gap: 1.5rem;
+  @media (min-width: ${props => props.theme.breakpoints.md}) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 `;
 
 const FormGroup = styled.div`
@@ -104,37 +109,60 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  color: #4b5563;
+  color: ${props => props.theme.colors.gray[700]};
   font-weight: 500;
 `;
 
 const Input = styled.input`
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid ${props => props.theme.colors.gray[300]};
+  border-radius: 0.5rem;
   font-size: 1rem;
+  height: 2.5rem;
   &:focus {
     outline: none;
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+    border-color: ${props => props.theme.colors.secondary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
   }
 `;
 
 const Select = styled.select`
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid ${props => props.theme.colors.gray[300]};
+  border-radius: 0.5rem;
   font-size: 1rem;
+  background-color: white;
+  height: 2.5rem;
   &:focus {
     outline: none;
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+    border-color: ${props => props.theme.colors.secondary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.secondary}20;
   }
 `;
 
-const ErrorMessage = styled.span`
-  color: #ef4444;
-  font-size: 0.875rem;
+const ErrorText = styled.div`
+  color: red;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+`;
+
+const BackButton = styled.button`
+  background: #d1d5db;
+  color: #1f2937;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  transition: transform 0.2s;
+  &:hover {
+    transform: translateY(-2px);
+  }
 `;
 
 const ContinueButton = styled.button`
@@ -144,7 +172,6 @@ const ContinueButton = styled.button`
   border-radius: 0.5rem;
   font-weight: 600;
   font-size: 1.125rem;
-  margin-top: 2rem;
   transition: transform 0.2s;
   &:hover {
     transform: translateY(-2px);
@@ -298,6 +325,10 @@ const PassengerDetails = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate('/search-results', { state: location.state });
+  };
+
   if (!departureFlight) {
     return (
       <Container>
@@ -375,16 +406,17 @@ const PassengerDetails = () => {
       </FlightSummary>
 
       <PassengerForm onSubmit={handleSubmit}>
-        <PassengerSection>
-          {passengerData.map((passenger, index) => (
-            <div key={index}>
-              <PassengerHeader>
-                <PassengerTitle>Passenger {index + 1}</PassengerTitle>
-              </PassengerHeader>
+        <FormTitle>Passenger Information</FormTitle>
+        {passengerData.map((passenger, index) => (
+          <PassengerSection key={index}>
+            <FormTitle>Passenger {index + 1}</FormTitle>
+            <FormGrid>
               <FormGroup>
-                <Label>First Name</Label>
+                <Label htmlFor={`firstName-${index}`}>First Name</Label>
                 <Input
                   type="text"
+                  name="firstName"
+                  id={`firstName-${index}`}
                   value={passenger.firstName}
                   onChange={(e) => handleInputChange(index, 'firstName', e.target.value)}
                   placeholder="First Name"
@@ -392,9 +424,11 @@ const PassengerDetails = () => {
                 />
               </FormGroup>
               <FormGroup>
-                <Label>Last Name</Label>
+                <Label htmlFor={`lastName-${index}`}>Last Name</Label>
                 <Input
                   type="text"
+                  name="lastName"
+                  id={`lastName-${index}`}
                   value={passenger.lastName}
                   onChange={(e) => handleInputChange(index, 'lastName', e.target.value)}
                   placeholder="Last Name"
@@ -402,41 +436,49 @@ const PassengerDetails = () => {
                 />
               </FormGroup>
               <FormGroup>
-                <Label>Email</Label>
+                <Label htmlFor={`email-${index}`}>Email</Label>
                 <Input
                   type="email"
+                  name="email"
+                  id={`email-${index}`}
                   value={passenger.email}
                   onChange={(e) => handleInputChange(index, 'email', e.target.value)}
                   placeholder="Enter your email address"
                   required
                 />
-                {passenger.emailError && <ErrorMessage>{passenger.emailError}</ErrorMessage>}
+                {passenger.emailError && <ErrorText>{passenger.emailError}</ErrorText>}
               </FormGroup>
               <FormGroup>
-                <Label>Phone</Label>
+                <Label htmlFor={`phone-${index}`}>Phone</Label>
                 <Input
-                  type="text"
+                  type="tel"
+                  name="phone"
+                  id={`phone-${index}`}
                   value={passenger.phone}
                   onChange={(e) => handleInputChange(index, 'phone', e.target.value)}
                   placeholder="Enter your phone number"
                   required
                 />
-                {passenger.phoneError && <ErrorMessage>{passenger.phoneError}</ErrorMessage>}
+                {passenger.phoneError && <ErrorText>{passenger.phoneError}</ErrorText>}
               </FormGroup>
               <FormGroup>
-                <Label>Date of Birth</Label>
+                <Label htmlFor={`dateOfBirth-${index}`}>Date of Birth</Label>
                 <Input
                   type="text"
+                  name="dateOfBirth"
+                  id={`dateOfBirth-${index}`}
                   value={passenger.dateOfBirth}
                   onChange={(e) => handleInputChange(index, 'dateOfBirth', e.target.value)}
                   placeholder="DD/MM/YYYY"
                   required
                 />
-                {passenger.dateOfBirthError && <ErrorMessage>{passenger.dateOfBirthError}</ErrorMessage>}
+                {passenger.dateOfBirthError && <ErrorText>{passenger.dateOfBirthError}</ErrorText>}
               </FormGroup>
               <FormGroup>
-                <Label>Gender</Label>
+                <Label htmlFor={`gender-${index}`}>Gender</Label>
                 <Select
+                  name="gender"
+                  id={`gender-${index}`}
                   value={passenger.gender}
                   onChange={(e) => handleInputChange(index, 'gender', e.target.value)}
                   required
@@ -448,9 +490,11 @@ const PassengerDetails = () => {
                 </Select>
               </FormGroup>
               <FormGroup>
-                <Label>Nationality</Label>
+                <Label htmlFor={`nationality-${index}`}>Nationality</Label>
                 <Input
                   type="text"
+                  name="nationality"
+                  id={`nationality-${index}`}
                   value={passenger.nationality}
                   onChange={(e) => handleInputChange(index, 'nationality', e.target.value)}
                   placeholder="Nationality"
@@ -458,8 +502,10 @@ const PassengerDetails = () => {
                 />
               </FormGroup>
               <FormGroup>
-                <Label>Meal Preference</Label>
+                <Label htmlFor={`mealPreference-${index}`}>Meal Preference</Label>
                 <Select
+                  name="mealPreference"
+                  id={`mealPreference-${index}`}
                   value={passenger.mealPreference}
                   onChange={(e) => handleInputChange(index, 'mealPreference', e.target.value)}
                 >
@@ -469,10 +515,13 @@ const PassengerDetails = () => {
                   <option value="Vegan">Vegan</option>
                 </Select>
               </FormGroup>
-            </div>
-          ))}
-        </PassengerSection>
-        <ContinueButton type="submit">Continue to Seat Selection</ContinueButton>
+            </FormGrid>
+          </PassengerSection>
+        ))}
+        <ButtonContainer>
+          <BackButton onClick={handleBack}>Back to Search Results</BackButton>
+          <ContinueButton type="submit">Continue to Seat Selection</ContinueButton>
+        </ButtonContainer>
       </PassengerForm>
     </Container>
   );
