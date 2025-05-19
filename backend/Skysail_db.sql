@@ -97,15 +97,17 @@ CREATE TABLE passengers (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    phone VARCHAR(20),
-    date_of_birth DATE,
-    gender VARCHAR(10) CHECK (gender IN ('Male', 'Female', 'Other')),
-    nationality VARCHAR(50),
-    meal_preference VARCHAR(30) CHECK (meal_preference IN ('Vegetarian', 'Non-Vegetarian', 'Vegan')),
-    passport_number VARCHAR(20)
+    email VARCHAR(100) NOT NULL UNIQUE, -- Added UNIQUE constraint for email
+    phone VARCHAR(20) NOT NULL, -- Made NOT NULL to match form
+    date_of_birth DATE NOT NULL, -- Made NOT NULL to match form
+    gender VARCHAR(10) NOT NULL CHECK (gender IN ('Male', 'Female', 'Other')),
+    nationality VARCHAR(50) NOT NULL, -- Made NOT NULL to match form
+    meal_preference VARCHAR(30) NOT NULL CHECK (meal_preference IN ('Vegetarian', 'Non-Vegetarian', 'Vegan')),
+    passport_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Optional: for tracking when the record was created
 );
 
+-- Recreate the passenger_bookings table (since it references passengers)
 CREATE TABLE passenger_bookings (
     passenger_id INTEGER REFERENCES passengers(id) ON DELETE CASCADE,
     booking_id INTEGER REFERENCES bookings(id) ON DELETE CASCADE,

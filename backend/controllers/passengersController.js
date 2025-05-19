@@ -18,7 +18,11 @@ module.exports = (pool) => {
         res.status(201).json(newPassenger);
       } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Server error adding passenger' });
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+          res.status(400).json({ error: 'Email already exists' });
+        } else {
+          res.status(500).json({ error: 'Server error adding passenger' });
+        }
       }
     },
 
@@ -29,7 +33,11 @@ module.exports = (pool) => {
         res.json(updatedPassenger);
       } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Server error updating passenger' });
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+          res.status(400).json({ error: 'Email already exists' });
+        } else {
+          res.status(500).json({ error: 'Server error updating passenger' });
+        }
       }
     },
 
