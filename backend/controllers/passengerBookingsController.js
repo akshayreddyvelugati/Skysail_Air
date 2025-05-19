@@ -1,4 +1,3 @@
-// passengerBookingsController.js
 const passengerBookingsModel = require('../models/passengerBookingsModel');
 
 module.exports = (pool) => {

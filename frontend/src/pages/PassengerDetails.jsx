@@ -249,8 +249,6 @@ const PassengerDetails = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null); // Reset error state
-
     const hasErrors = passengerData.some(p => 
       p.emailError || 
       p.phoneError || 
@@ -264,29 +262,25 @@ const PassengerDetails = () => {
       !p.nationality
     );
     if (hasErrors) {
-      setError('Please fill in all required fields correctly.');
+      alert('Please fill in all required fields correctly.');
       return;
     }
 
     try {
       // Save passengers
       const passengerPromises = passengerData.map(async (passenger) => {
-        try {
-          const response = await axios.post('http://localhost:5000/api/passengers', {
-            first_name: passenger.firstName,
-            last_name: passenger.lastName,
-            email: passenger.email,
-            phone: passenger.phone,
-            date_of_birth: passenger.dateOfBirth.split('/').reverse().join('-'),
-            gender: passenger.gender,
-            nationality: passenger.nationality,
-            meal_preference: passenger.mealPreference || null,
-            passport_number: null,
-          });
-          return response.data;
-        } catch (err) {
-          throw new Error(err.response?.data?.error || 'Failed to save passenger');
-        }
+        const response = await axios.post('http://localhost:5000/api/passengers', {
+          first_name: passenger.firstName,
+          last_name: passenger.lastName,
+          email: passenger.email,
+          phone: passenger.phone,
+          date_of_birth: passenger.dateOfBirth.split('/').reverse().join('-'),
+          gender: passenger.gender,
+          nationality: passenger.nationality,
+          meal_preference: passenger.mealPreference || null,
+          passport_number: null,
+        });
+        return response.data;
       });
 
       const savedPassengers = await Promise.all(passengerPromises);
@@ -327,7 +321,7 @@ const PassengerDetails = () => {
       sessionStorage.setItem('passengerData', JSON.stringify(savedPassengers));
       navigate(`/seat-selection/${departureFlight.id}${returnFlight ? `/${returnFlight.id}` : ''}`, { state: bookingData });
     } catch (err) {
-      setError(err.message || 'Failed to save passenger details and create booking');
+      setError('Failed to save passenger details and create booking');
     }
   };
 
@@ -340,6 +334,15 @@ const PassengerDetails = () => {
       <Container>
         <StepFlow currentStep={3} />
         <ErrorContainer>Missing flight data. Please go back and select a flight.</ErrorContainer>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container>
+        <StepFlow currentStep={3} />
+        <ErrorContainer>{error}</ErrorContainer>
       </Container>
     );
   }
@@ -404,7 +407,6 @@ const PassengerDetails = () => {
 
       <PassengerForm onSubmit={handleSubmit}>
         <FormTitle>Passenger Information</FormTitle>
-        {error && <ErrorContainer>{error}</ErrorContainer>}
         {passengerData.map((passenger, index) => (
           <PassengerSection key={index}>
             <FormTitle>Passenger {index + 1}</FormTitle>
