@@ -4,7 +4,7 @@ require('dotenv').config();
 const pool = require('./dbConfig'); 
 const app = express();
 
-//middleware 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
   res.send('Welcome to SkySail Airlines API!');
 });
 
-//routes
+// Routes
 const airportsRoute = require('./routes/airportsRoute');
 const airplanesRoute = require('./routes/airplanesRoute'); 
 const flightsRoute = require('./routes/flightsRoute');

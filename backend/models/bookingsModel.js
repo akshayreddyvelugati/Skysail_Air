@@ -1,4 +1,3 @@
-// bookingsModel.js
 module.exports = (pool) => {
   return {
     getAllBookings: async () => {
@@ -11,7 +10,7 @@ module.exports = (pool) => {
       return result.rows[0] || null;
     },
 
-    addBooking: async (data) => {
+    createBooking: async (data) => {
       const { booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price } = data;
       const result = await pool.query( 
         'INSERT INTO bookings (booking_id, flight_id, return_flight_id, seat_id, booking_status, total_price) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',

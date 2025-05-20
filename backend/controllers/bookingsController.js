@@ -2,13 +2,13 @@ const bookingsModel = require('../models/bookingsModel');
 
 module.exports = (pool) => {
   return {
-    createBooking: async (req, res) => {
+    getAllBookings: async (req, res) => {
       try {
-        const newBooking = await bookingsModel(pool).createBooking(req.body);
-        res.status(201).json(newBooking);
+        const bookings = await bookingsModel(pool).getAllBookings();
+        res.status(200).json(bookings);
       } catch (error) {
-        console.error('Error creating booking:', error);
-        res.status(500).json({ error: 'Server error creating booking' });
+        console.error('Error fetching all bookings:', error);
+        res.status(500).json({ error: 'Server error fetching bookings' });
       }
     },
 
@@ -23,6 +23,16 @@ module.exports = (pool) => {
       } catch (error) {
         console.error('Error fetching booking:', error);
         res.status(500).json({ error: 'Server error fetching booking' });
+      }
+    },
+
+    createBooking: async (req, res) => {
+      try {
+        const newBooking = await bookingsModel(pool).createBooking(req.body);
+        res.status(201).json(newBooking);
+      } catch (error) {
+        console.error('Error creating booking:', error);
+        res.status(500).json({ error: 'Server error creating booking' });
       }
     },
 
