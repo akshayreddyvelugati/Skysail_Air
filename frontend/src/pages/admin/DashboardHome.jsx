@@ -62,9 +62,9 @@ const DashboardHome = () => {
   const [stats, setStats] = useState({
     totalAirports: 0,
     totalAirplanes: 0,
-    totalFlights: 0, // Changed from flightsToday to totalFlights
+    totalFlights: 0,
     crewMembers: 0,
-    ticketsSold: 3678, // Static default value
+    ticketsSold: 0, // Initialize to 0; will be updated with real data
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -91,17 +91,21 @@ const DashboardHome = () => {
         const crewResponse = await axios.get('http://localhost:5000/api/crew-members');
         const crewMembers = crewResponse.data.length;
 
+        // Fetch Total Passengers (Tickets Sold)
+        const passengersResponse = await axios.get('http://localhost:5000/api/passengers');
+        const ticketsSold = passengersResponse.data.length;
+
         // Update state with fetched data
         setStats({
           totalAirports,
           totalAirplanes,
-          totalFlights, // Updated to totalFlights
+          totalFlights,
           crewMembers,
-          ticketsSold: 3678, // Static value
+          ticketsSold, // Use the actual number of passengers
         });
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
-        setError('Failed to load dashboard statistics');
+        setError('Failed to load dashboard statistics: ' + err.message);
       } finally {
         setLoading(false);
       }

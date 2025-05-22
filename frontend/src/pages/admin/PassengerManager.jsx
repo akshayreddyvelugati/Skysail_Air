@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import axios from 'axios';
 import { Search, User, Plane, Calendar } from 'lucide-react';
 
 const Container = styled.div`
@@ -87,65 +88,32 @@ const Badge = styled.span`
   }}
 `;
 
-// Dummy data
-const initialPassengers = [
-  {
-    id: '1',
-    firstName: 'Alice',
-    lastName: 'Johnson',
-    email: 'alice.johnson@email.com',
-    phone: '+1-555-0101',
-    passportNumber: 'P123456789',
-    nationality: 'USA',
-    bookings: [
-      {
-        id: 'B1',
-        flightNumber: 'SK001',
-        route: 'JFK → LAX',
-        date: '2024-03-25',
-        status: 'confirmed'
-      },
-      {
-        id: 'B2',
-        flightNumber: 'SK002',
-        route: 'LAX → JFK',
-        date: '2024-03-30',
-        status: 'confirmed'
-      }
-    ]
-  },
-  {
-    id: '2',
-    firstName: 'Bob',
-    lastName: 'Smith',
-    email: 'bob.smith@email.com',
-    phone: '+1-555-0102',
-    passportNumber: 'P987654321',
-    nationality: 'UK',
-    bookings: [
-      {
-        id: 'B3',
-        flightNumber: 'SK003',
-        route: 'LHR → JFK',
-        date: '2024-03-26',
-        status: 'checked-in'
-      }
-    ]
-  }
-];
-
 const PassengerManager = () => {
-  const [passengers, setPassengers] = useState(initialPassengers);
+  const [passengers, setPassengers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchPassengers = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/passengers');
+        setPassengers(response.data);
+      } catch (err) {
+        console.error('Error fetching passengers:', err);
+        setError('Failed to fetch passengers: ' + err.message);
+      }
+    };
+    fetchPassengers();
+  }, []);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
 
   const filteredPassengers = passengers.filter(passenger =>
-    passenger.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    passenger.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    passenger.passportNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    passenger.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    passenger.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (passenger.passport_number && passenger.passport_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
     passenger.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -163,6 +131,10 @@ const PassengerManager = () => {
         return null;
     }
   };
+
+  if (error) {
+    return <div style={{ padding: '1rem', color: '#ef4444' }}>{error}</div>;
+  }
 
   return (
     <Container>
@@ -194,7 +166,7 @@ const PassengerManager = () => {
                 <div className="flex items-center gap-3">
                   <User size={20} className="text-gray-400" />
                   <div>
-                    <div className="font-medium">{passenger.firstName} {passenger.lastName}</div>
+                    <div className="font-medium">{passenger.first_name} {passenger.last_name}</div>
                     <div className="text-sm text-gray-500">{passenger.nationality}</div>
                   </div>
                 </div>
@@ -203,22 +175,24 @@ const PassengerManager = () => {
                 <div>{passenger.email}</div>
                 <div className="text-sm text-gray-500">{passenger.phone}</div>
               </Td>
-              <Td>{passenger.passportNumber}</Td>
+              <Td>{passenger.passport_number || 'N/A'}</Td>
               <Td>
                 <div className="space-y-2">
-                  {passenger.bookings.map(booking => (
-                    <div key={booking.id} className="flex items-center gap-2">
+                  {passenger.booking_id ? (
+                    <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1 text-gray-500">
                         <Plane size={16} />
-                        <span>{booking.flightNumber}</span>
+                        <span>SK{passenger.booking_id}</span>
                       </div>
                       <div className="flex items-center gap-1 text-gray-500">
                         <Calendar size={16} />
-                        <span>{booking.date}</span>
+                        <span>{new Date(passenger.created_at).toLocaleDateString()}</span>
                       </div>
-                      {getStatusBadge(booking.status)}
+                      {getStatusBadge('confirmed')} {/* Assuming status is 'confirmed' since booking was just created */}
                     </div>
-                  ))}
+                  ) : (
+                    <div>No bookings</div>
+                  )}
                 </div>
               </Td>
             </tr>

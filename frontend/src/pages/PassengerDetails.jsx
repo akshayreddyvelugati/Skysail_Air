@@ -274,10 +274,10 @@ const PassengerDetails = () => {
           last_name: passenger.lastName,
           email: passenger.email,
           phone: passenger.phone,
-          date_of_birth: passenger.dateOfBirth.split('/').reverse().join('-'),
+          date_of_birth: passenger.dateOfBirth.split('/').reverse().join('-'), // Convert DD/MM/YYYY to YYYY-MM-DD
           gender: passenger.gender,
           nationality: passenger.nationality,
-          meal_preference: passenger.mealPreference || null,
+          meal_preference: passenger.mealPreference || 'Vegetarian', // Default to Vegetarian if not provided
           passport_number: null,
         });
         return response.data;
@@ -321,7 +321,8 @@ const PassengerDetails = () => {
       sessionStorage.setItem('passengerData', JSON.stringify(savedPassengers));
       navigate(`/seat-selection/${departureFlight.id}${returnFlight ? `/${returnFlight.id}` : ''}`, { state: bookingData });
     } catch (err) {
-      setError('Failed to save passenger details and create booking');
+      console.error('Error saving passenger details:', err);
+      setError('Failed to save passenger details and create booking: ' + err.message);
     }
   };
 
