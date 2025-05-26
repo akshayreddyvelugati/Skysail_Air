@@ -9,15 +9,26 @@ const Nav = styled.nav`
   position: sticky;
   top: 0;
   z-index: 50;
+  width: 100%; /* Ensure the nav takes full width */
 `;
 
 const Container = styled.div`
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 1rem;
+  width: 100%; /* Full width of the parent */
+  padding: 1rem 2rem; /* Adjusted padding for better spacing on all screens */
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* Push logo and links to edges */
   align-items: center;
+  box-sizing: border-box; /* Prevent padding from affecting width */
+
+  /* Media query for smaller screens (like HP laptop) */
+  @media (max-width: ${props => props.theme.breakpoints.md}) {
+    padding: 1rem 1rem; /* Reduced padding for smaller screens */
+  }
+
+  /* Media query for larger screens (like MacBook) */
+  @media (min-width: ${props => props.theme.breakpoints.xl}) {
+    padding: 1rem 3rem; /* More padding on larger screens */
+  }
 `;
 
 const Logo = styled(Link)`

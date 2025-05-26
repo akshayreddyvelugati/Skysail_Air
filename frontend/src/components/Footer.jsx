@@ -6,18 +6,18 @@ import { useNavigate } from 'react-router-dom';
 // Footer Wrapper with increased padding and min-height
 const FooterWrapper = styled.footer`
   position: relative;
-  padding: 4rem ; /* More padding for a larger footer */
-  min-height: 220px;         /* Ensures footer is tall */
-  text-align: relative ;
+  padding: 3rem 1rem; /* Adjusted padding for better spacing */
+  min-height: 220px; /* Ensures footer is tall */
+  text-align: center; /* Fixed invalid value */
   overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-end; /* Ensures copyright is at the bottom */
-
   backdrop-filter: blur(18px);
   background-color: rgba(28, 28, 28, 0.5);
-  border-radius: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 100%; /* Ensure footer takes full width */
+  box-sizing: border-box;
 
   &::before {
     content: '';
@@ -36,40 +36,53 @@ const FooterWrapper = styled.footer`
 `;
 
 const FooterContent = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 2rem;
   position: relative;
   z-index: 1;
-  align-items: stretch;
+  padding: 0 1rem; /* Add padding to control edge spacing */
+  width: 100%; /* Ensure full width */
+  box-sizing: border-box;
 
-  @media (min-width: 768px) {
+  @media (max-width: ${props => props.theme.breakpoints.md}) {
+    align-items: center; /* Center content on smaller screens */
+    padding: 0 0.5rem; /* Reduced padding for smaller screens */
+  }
+
+  @media (min-width: ${props => props.theme.breakpoints.md}) {
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between; /* Push sections to edges */
     align-items: flex-start;
     text-align: left;
+    padding: 0 2rem; /* More padding on larger screens */
   }
 `;
 
 const FooterSection = styled.div`
   flex: 1;
-  padding: 0 1.5rem;
-  border-right: 5px solid rgba(255, 255, 255, 0.5); /* Thicker vertical line */
+  padding: 0 1rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.3); /* Thinner vertical line */
   &:last-child {
     border-right: none;
   }
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+
+  @media (max-width: ${props => props.theme.breakpoints.md}) {
+    border-right: none;
+    align-items: center;
+    text-align: center;
+    padding: 0 0.5rem;
+  }
 `;
 
 const FooterTitle = styled.h3`
   font-family: ${({ theme }) => theme.fonts.primary || "'Poppins', sans-serif"};
-  font-size: 1.7rem;
+  font-size: 1.5rem;
   color: #ffffff;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1rem;
   font-weight: 600;
   letter-spacing: 0.05em;
 `;
@@ -77,14 +90,14 @@ const FooterTitle = styled.h3`
 const FooterLinks = styled.nav`
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 0.8rem;
 `;
 
 const FooterLink = styled.a`
   color: #ffffff;
   text-decoration: none;
   font-family: ${({ theme }) => theme.fonts.secondary || "'Open Sans', sans-serif"};
-  font-size: 1.2rem;
+  font-size: 1rem;
   transition: color 0.3s ease;
   cursor: pointer;
 
@@ -96,16 +109,17 @@ const FooterLink = styled.a`
 const SocialLinks = styled.div`
   display: flex;
   justify-content: center;
-  gap: 1.7rem;
-  margin-top: 1.2rem;
-  @media (min-width: 768px) {
+  gap: 1.5rem;
+  margin-top: 1rem;
+
+  @media (min-width: ${props => props.theme.breakpoints.md}) {
     justify-content: flex-start;
   }
 `;
 
 const SocialIcon = styled.a`
   color: #ffffff;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   transition: color 0.3s ease, transform 0.2s ease;
 
   &:hover {
@@ -116,9 +130,9 @@ const SocialIcon = styled.a`
 
 const CopyrightText = styled.p`
   font-family: ${({ theme }) => theme.fonts.secondary || "'Open Sans', sans-serif"};
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: #ffffff;
-  margin-top: 2.5rem;
+  margin-top: 2rem;
   margin-bottom: 0;
   position: relative;
   z-index: 1;
@@ -145,7 +159,7 @@ function Footer() {
       <FooterContent>
         <FooterSection>
           <FooterTitle>Skysail</FooterTitle>
-          <p style={{ fontSize: '1rem', marginBottom: '1.2rem', color: '#ffffff' }}>
+          <p style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#ffffff' }}>
             Elevating your journey with premium travel experiences.
           </p>
           <SocialLinks>
